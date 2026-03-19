@@ -6,6 +6,7 @@ import Chat from './pages/Chat'
 import Files from './pages/Files'
 import Pricing from './pages/Pricing'
 import Settings from './pages/Settings'
+import Workspace from './pages/Workspace'
 
 function App() {
   const [activePage, setActivePage] = useState('Dashboard')
@@ -102,20 +103,17 @@ function App() {
     onLogout: handleLogout
   }
 
-  // Page map with fade transition
   const pages = {
     Chat:      <Chat {...props} />,
     Files:     <Files {...props} />,
     Pricing:   <Pricing {...props} />,
     Settings:  <Settings {...props} />,
+    Workspace: <Workspace {...props} />,
     Dashboard: <Dashboard {...props} />
   }
 
   return (
-    <div
-      key={activePage}
-      className="page-transition"
-    >
+    <div key={activePage} className="page-transition">
       {pages[activePage] || <Dashboard {...props} />}
     </div>
   )

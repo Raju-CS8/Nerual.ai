@@ -15,7 +15,6 @@ const sendMessage = async (req, res) => {
       return res.status(400).json({ error: 'Message is required' })
     }
 
-    // Block free users who exceeded token limit
     if (req.user.plan === 'free' && req.user.tokensUsed >= 100000) {
       return res.status(403).json({
         error: 'Token limit reached! Please upgrade to Pro to continue chatting.',
@@ -25,7 +24,6 @@ const sendMessage = async (req, res) => {
 
     const model = 'llama-3.3-70b-versatile'
 
-    // ✅ Build full conversation with memory
     const conversationMessages = [
       {
         role: 'system',
@@ -36,15 +34,10 @@ const sendMessage = async (req, res) => {
           : `You are NEURALIQ AI. You have full memory of this conversation.
              Be concise and helpful. Always remember what was discussed earlier in this chat.`
       },
-      // ✅ Include all previous messages for memory
       ...history
         .filter(msg => msg.role === 'user' || msg.role === 'assistant')
-        .slice(-20) // last 20 messages to avoid token overflow
-        .map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-      // Current new message
+        .slice(-20)
+        .map(msg => ({ role: msg.role, content: msg.content })),
       { role: 'user', content: message }
     ]
 
@@ -58,19 +51,14 @@ const sendMessage = async (req, res) => {
     const reply = completion.choices[0]?.message?.content || 'No response'
     const tokensUsed = completion.usage?.total_tokens || 0
 
-    // Update total tokens in User
-    await User.findByIdAndUpdate(req.user.id, {
-      $inc: { tokensUsed: tokensUsed }
-    })
+    await User.findByIdAndUpdate(req.user.id, { $inc: { tokensUsed: tokensUsed } })
 
-    // Track daily usage
     await Usage.findOneAndUpdate(
       { userId: req.user.id, date: getToday() },
       { $inc: { tokensUsed: tokensUsed, messagesCount: 1 } },
       { upsert: true, new: true }
     )
 
-    // Save to chat history in DB
     let chat
     if (chatId) {
       chat = await Chat.findByIdAndUpdate(chatId, {
@@ -153,4 +141,32 @@ const getUsageStats = async (req, res) => {
   }
 }
 
-module.exports = { sendMessage, getChats, getChat, getUsageStats }
+// ✅ Rename chat
+const renameChat = async (req, res) => {
+  try {
+    const { title } = req.body
+    if (!title?.trim()) return res.status(400).json({ error: 'Title required' })
+
+    const chat = await Chat.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      { title: title.trim() },
+      { new: true }
+    )
+    if (!chat) return res.status(404).json({ error: 'Chat not found' })
+    res.json({ success: true, chat })
+  } catch (error) {
+    res.status(500).json({ error: 'Could not rename chat' })
+  }
+}
+
+// ✅ Delete chat
+const deleteChat = async (req, res) => {
+  try {
+    await Chat.findOneAndDelete({ _id: req.params.id, userId: req.user.id })
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Could not delete chat' })
+  }
+}
+
+module.exports = { sendMessage, getChats, getChat, getUsageStats, renameChat, deleteChat }

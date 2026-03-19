@@ -1,12 +1,13 @@
 // src/components/Sidebar.jsx
 export default function Sidebar({ activePage, setActivePage, user, onLogout }) {
-  const navItems = [
-    { name: 'Dashboard', icon: '⊞' },
-    { name: 'Chat',      icon: '💬' },
-    { name: 'Files',     icon: '📄' },
-    { name: 'Pricing',   icon: '💎' },
-    { name: 'Settings',  icon: '⚙️' },
-  ]
+ const navItems = [
+  { name: 'Dashboard', icon: '⊞' },
+  { name: 'Chat',      icon: '💬' },
+  { name: 'Files',     icon: '📄' },
+  { name: 'Workspace', icon: '🗂️' },
+  { name: 'Pricing',   icon: '💎' },
+  { name: 'Settings',  icon: '⚙️' },
+]
 
   return (
     <div className="flex flex-col h-full w-64 py-6 px-4 flex-shrink-0"
