@@ -21,9 +21,15 @@ const workspaceRoutes = require('./routes/workspaceRoutes')
 const app = express()
 const server = http.createServer(app)
 
+// ✅ Dynamic CORS for both local and production
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.FRONTEND_URL
+].filter(Boolean)
+
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
+    origin: allowedOrigins,
     methods: ['GET', 'POST']
   }
 })
@@ -32,7 +38,17 @@ const PORT = process.env.PORT || 5000
 
 connectDB()
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true
+}))
+
 app.use(express.json())
 
 app.use(session({
@@ -45,8 +61,6 @@ app.use(passport.initialize())
 app.use(passport.session())
 
 // ✅ Rate Limiters
-
-// General API — 100 requests per 15 minutes
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -55,7 +69,6 @@ const generalLimiter = rateLimit({
   legacyHeaders: false
 })
 
-// Auth — 10 attempts per 15 minutes (prevent brute force)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -64,7 +77,6 @@ const authLimiter = rateLimit({
   legacyHeaders: false
 })
 
-// Chat — 30 messages per minute
 const chatLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
@@ -73,7 +85,6 @@ const chatLimiter = rateLimit({
   legacyHeaders: false
 })
 
-// File upload — 20 uploads per hour
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
@@ -82,7 +93,6 @@ const uploadLimiter = rateLimit({
   legacyHeaders: false
 })
 
-// ✅ Apply rate limiters to routes
 app.use('/api', generalLimiter)
 app.use('/api/auth/login', authLimiter)
 app.use('/api/auth/signup', authLimiter)
