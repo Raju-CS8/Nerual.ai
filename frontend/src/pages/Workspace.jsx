@@ -2,13 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useSocket } from '../hooks/useSocket'
 import {
-  getWorkspacesAPI,
-  createWorkspaceAPI,
-  addDocumentToWorkspaceAPI,
-  chatWithWorkspaceAPI,
-  deleteDocumentAPI,
-  deleteWorkspaceAPI,
-  joinWorkspaceAPI
+  getWorkspacesAPI, createWorkspaceAPI, addDocumentToWorkspaceAPI,
+  chatWithWorkspaceAPI, deleteDocumentAPI, deleteWorkspaceAPI,
+  joinWorkspaceAPI, renameWorkspaceAPI
 } from '../api'
 
 export default function Workspace({ activePage, setActivePage, user, onLogout }) {
@@ -26,20 +22,20 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
   const [typingUser, setTypingUser] = useState(null)
   const [showShareCode, setShowShareCode] = useState(false)
   const [joinError, setJoinError] = useState('')
+  const [renamingId, setRenamingId] = useState(null)
+  const [renameValue, setRenameValue] = useState('')
   const fileInputRef = useRef(null)
   const bottomRef = useRef(null)
   const typingTimeout = useRef(null)
   const activeWorkspaceRef = useRef(null)
 
-  // Keep ref in sync
-  useEffect(() => {
-    activeWorkspaceRef.current = activeWorkspace
-  }, [activeWorkspace])
+  // ✅ Fix — support both _id and id
+  const userId = user?._id || user?.id
 
-  // ✅ Fixed socket callbacks — no duplicate messages
+  useEffect(() => { activeWorkspaceRef.current = activeWorkspace }, [activeWorkspace])
+
   const socketCallbacks = {
     onNewMessage: ({ message, userName, role }) => {
-      // Only add if from ANOTHER user
       if (userName !== user?.name || role === 'assistant') {
         setMessages(prev => {
           const lastMsg = prev[prev.length - 1]
@@ -51,31 +47,17 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
     onUsersOnline: (users) => setOnlineUsers(users),
     onUserJoined: ({ userName: joinedUser }) => {
       if (joinedUser !== user?.name) {
-        setMessages(prev => [...prev, {
-          role: 'system',
-          content: `👋 ${joinedUser} joined the workspace`,
-          userName: 'System'
-        }])
+        setMessages(prev => [...prev, { role: 'system', content: `👋 ${joinedUser} joined the workspace`, userName: 'System' }])
       }
     },
     onUserLeft: ({ userName: leftUser }) => {
-      setMessages(prev => [...prev, {
-        role: 'system',
-        content: `👋 ${leftUser} left the workspace`,
-        userName: 'System'
-      }])
+      setMessages(prev => [...prev, { role: 'system', content: `👋 ${leftUser} left the workspace`, userName: 'System' }])
     },
-    onUserTyping: ({ userName: typingName }) => {
-      if (typingName !== user?.name) setTypingUser(typingName)
-    },
+    onUserTyping: ({ userName: typingName }) => { if (typingName !== user?.name) setTypingUser(typingName) },
     onUserStopTyping: () => setTypingUser(null),
     onWorkspaceUpdated: ({ type, fileName, userName: uploaderName }) => {
       if (type === 'document_added') {
-        setMessages(prev => [...prev, {
-          role: 'system',
-          content: `📄 ${uploaderName} added "${fileName}"`,
-          userName: 'System'
-        }])
+        setMessages(prev => [...prev, { role: 'system', content: `📄 ${uploaderName} added "${fileName}"`, userName: 'System' }])
         getWorkspacesAPI().then(data => {
           if (data.success) {
             const updated = data.workspaces.find(w => w._id === activeWorkspaceRef.current?._id)
@@ -93,15 +75,11 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
 
   useEffect(() => {
     let mounted = true
-    getWorkspacesAPI()
-      .then(data => { if (mounted && data.success) setWorkspaces(data.workspaces) })
-      .catch(() => {})
+    getWorkspacesAPI().then(data => { if (mounted && data.success) setWorkspaces(data.workspaces) }).catch(() => {})
     return () => { mounted = false }
   }, [])
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const createWorkspace = async () => {
     if (!newWorkspaceName.trim()) return
@@ -114,9 +92,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
         setNewWorkspaceName('')
         setCreating(false)
       }
-    } catch {
-      alert('Could not create workspace')
-    }
+    } catch { alert('Could not create workspace') }
   }
 
   const handleJoinWorkspace = async () => {
@@ -127,23 +103,14 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
       if (data.success) {
         setWorkspaces(prev => {
           const exists = prev.find(w => w._id === data.workspace._id)
-          if (exists) return prev
-          return [data.workspace, ...prev]
+          return exists ? prev : [data.workspace, ...prev]
         })
         setActiveWorkspace(data.workspace)
-        setMessages([{
-          role: 'assistant',
-          content: `✅ Joined workspace "${data.workspace.name}"! You can now collaborate with the team.`,
-          userName: 'NEURALIQ AI'
-        }])
+        setMessages([{ role: 'assistant', content: `✅ Joined workspace "${data.workspace.name}"! You can now collaborate!`, userName: 'NEURALIQ AI' }])
         setShareCode('')
         setJoining(false)
-      } else {
-        setJoinError(data.error || 'Invalid share code')
-      }
-    } catch {
-      setJoinError('Could not join workspace')
-    }
+      } else { setJoinError(data.error || 'Invalid share code') }
+    } catch { setJoinError('Could not join workspace') }
   }
 
   const selectWorkspace = (ws) => {
@@ -169,17 +136,9 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
           content: `✅ "${file.name}" added! You now have ${data.workspace.documents.length} document(s).`,
           userName: 'NEURALIQ AI'
         }])
-        emitMessage('document_added', {
-          workspaceId: activeWorkspace._id,
-          fileName: file.name,
-          userName: user?.name
-        })
-      } else {
-        alert(data.error)
-      }
-    } catch {
-      alert('Upload failed')
-    }
+        emitMessage('document_added', { workspaceId: activeWorkspace._id, fileName: file.name, userName: user?.name })
+      } else { alert(data.error) }
+    } catch { alert('Upload failed') }
     setUploading(false)
   }
 
@@ -191,73 +150,50 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
         setActiveWorkspace(data.workspace)
         setWorkspaces(prev => prev.map(w => w._id === data.workspace._id ? data.workspace : w))
       }
-    } catch {
-      alert('Could not delete document')
-    }
+    } catch { alert('Could not delete document') }
   }
 
   const handleDeleteWorkspace = async (workspaceId) => {
+    if (!window.confirm('Delete this workspace permanently?')) return
     try {
       await deleteWorkspaceAPI(workspaceId)
       setWorkspaces(prev => prev.filter(w => w._id !== workspaceId))
-      if (activeWorkspace?._id === workspaceId) {
-        setActiveWorkspace(null)
-        setMessages([])
+      if (activeWorkspace?._id === workspaceId) { setActiveWorkspace(null); setMessages([]) }
+    } catch { alert('Could not delete workspace') }
+  }
+
+  const handleRenameWorkspace = async (id) => {
+    if (!renameValue.trim()) { setRenamingId(null); return }
+    try {
+      const data = await renameWorkspaceAPI(id, renameValue)
+      if (data.success) {
+        setWorkspaces(prev => prev.map(w => w._id === id ? { ...w, name: renameValue } : w))
+        if (activeWorkspace?._id === id) setActiveWorkspace(prev => ({ ...prev, name: renameValue }))
       }
-    } catch {
-      alert('Could not delete workspace')
-    }
+    } catch { console.log('Could not rename') }
+    setRenamingId(null)
   }
 
   const sendMessage = async () => {
     if (!input.trim() || !activeWorkspace) return
-
     const userMsg = { role: 'user', content: input, userName: user?.name }
     setMessages(prev => [...prev, userMsg])
-
     const currentInput = input
     setInput('')
     setLoading(true)
-
     emitMessage('stop_typing', { workspaceId: activeWorkspace._id })
-
-    // ✅ Broadcast to OTHER users only
-    emitMessage('workspace_message', {
-      workspaceId: activeWorkspace._id,
-      message: currentInput,
-      userName: user?.name,
-      role: 'user'
-    })
-
+    emitMessage('workspace_message', { workspaceId: activeWorkspace._id, message: currentInput, userName: user?.name, role: 'user' })
     try {
       const data = await chatWithWorkspaceAPI(activeWorkspace._id, currentInput, messages)
       if (data.error) {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: `Error: ${data.error}`,
-          userName: 'NEURALIQ AI'
-        }])
+        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}`, userName: 'NEURALIQ AI' }])
       } else {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: data.reply,
-          userName: 'NEURALIQ AI'
-        }])
-        // ✅ Broadcast AI response to other users
-        emitMessage('ai_response', {
-          workspaceId: activeWorkspace._id,
-          message: data.reply,
-          role: 'assistant'
-        })
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply, userName: 'NEURALIQ AI' }])
+        emitMessage('ai_response', { workspaceId: activeWorkspace._id, message: data.reply, role: 'assistant' })
       }
     } catch {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Error connecting to server!',
-        userName: 'NEURALIQ AI'
-      }])
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Error connecting to server!', userName: 'NEURALIQ AI' }])
     }
-
     setLoading(false)
   }
 
@@ -266,34 +202,21 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
     if (activeWorkspace) {
       emitMessage('typing', { workspaceId: activeWorkspace._id, userName: user?.name })
       clearTimeout(typingTimeout.current)
-      typingTimeout.current = setTimeout(() => {
-        emitMessage('stop_typing', { workspaceId: activeWorkspace._id })
-      }, 1500)
+      typingTimeout.current = setTimeout(() => emitMessage('stop_typing', { workspaceId: activeWorkspace._id }), 1500)
     }
   }
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
 
-  const copyShareCode = (code) => {
-    navigator.clipboard.writeText(code)
-    alert(`Share code copied: ${code}`)
-  }
+  const copyShareCode = (code) => { navigator.clipboard.writeText(code); alert(`Share code copied: ${code}`) }
 
-  const isOwner = activeWorkspace?.userId?.toString() === user?.id
+  // ✅ Fixed ownership check using _id
+  const isOwner = activeWorkspace?.userId?.toString() === userId
+  const isWsOwner = (ws) => ws.userId?.toString() === userId
 
-  const quickPrompts = [
-    'Summarize all documents',
-    'Compare the documents',
-    'What are the key differences?',
-    'Create flashcards from all docs',
-    'List the main topics covered',
-    'What are the action items?'
-  ]
+  const quickPrompts = ['Summarize all documents', 'Compare the documents', 'What are the key differences?', 'Create flashcards from all docs', 'List the main topics covered', 'What are the action items?']
 
   return (
     <div className="flex h-screen overflow-hidden"
@@ -308,13 +231,11 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
         <div className="flex items-center justify-between px-1">
           <p className="text-xs text-gray-500 uppercase tracking-widest">Workspaces</p>
           <div className="flex gap-1">
-            <button
-              onClick={() => { setJoining(!joining); setCreating(false) }}
+            <button onClick={() => { setJoining(!joining); setCreating(false) }}
               className="text-xs px-2 py-1 rounded-lg text-cyan-400 hover:bg-cyan-400/10 transition-all">
               Join
             </button>
-            <button
-              onClick={() => { setCreating(!creating); setJoining(false) }}
+            <button onClick={() => { setCreating(!creating); setJoining(false) }}
               className="text-xs px-2 py-1 rounded-lg text-purple-400 hover:bg-purple-400/10 transition-all">
               + New
             </button>
@@ -323,42 +244,26 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
 
         {creating && (
           <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              placeholder="Workspace name..."
-              value={newWorkspaceName}
+            <input type="text" placeholder="Workspace name..." value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createWorkspace()}
               className="w-full py-2 px-3 rounded-lg outline-none text-white text-sm placeholder-gray-600"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
-              autoFocus
-            />
-            <button onClick={createWorkspace}
-              className="py-2 rounded-lg text-sm font-medium text-white"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
-              Create
-            </button>
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} autoFocus />
+            <button onClick={createWorkspace} className="py-2 rounded-lg text-sm font-medium text-white"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>Create</button>
           </div>
         )}
 
         {joining && (
           <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              placeholder="Enter share code..."
-              value={shareCode}
+            <input type="text" placeholder="Enter share code..." value={shareCode}
               onChange={(e) => setShareCode(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && handleJoinWorkspace()}
               className="w-full py-2 px-3 rounded-lg outline-none text-white text-sm placeholder-gray-600 uppercase"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(6,182,212,0.3)' }}
-              autoFocus
-            />
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(6,182,212,0.3)' }} autoFocus />
             {joinError && <p className="text-red-400 text-xs">{joinError}</p>}
-            <button onClick={handleJoinWorkspace}
-              className="py-2 rounded-lg text-sm font-medium text-white"
-              style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>
-              Join Workspace
-            </button>
+            <button onClick={handleJoinWorkspace} className="py-2 rounded-lg text-sm font-medium text-white"
+              style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>Join Workspace</button>
           </div>
         )}
 
@@ -377,9 +282,22 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
-                      <p className="text-white text-xs font-medium truncate">{ws.name}</p>
-                      {ws.userId?.toString() !== user?.id && (
-                        <span className="text-xs text-cyan-400">shared</span>
+                      {renamingId === ws._id ? (
+                        <input type="text" value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRenameWorkspace(ws._id)
+                            if (e.key === 'Escape') setRenamingId(null)
+                          }}
+                          onBlur={() => handleRenameWorkspace(ws._id)}
+                          className="w-full text-xs text-white bg-transparent outline-none border-b border-purple-400"
+                          autoFocus onClick={(e) => e.stopPropagation()} />
+                      ) : (
+                        <p className="text-white text-xs font-medium truncate">{ws.name}</p>
+                      )}
+                      {/* ✅ Fixed shared tag */}
+                      {!isWsOwner(ws) && (
+                        <span className="text-xs text-cyan-400 flex-shrink-0">shared</span>
                       )}
                     </div>
                     <p className="text-gray-600 text-xs mt-1">
@@ -387,12 +305,19 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                       {ws.collaborators?.length > 0 && ` · ${ws.collaborators.length} collab`}
                     </p>
                   </div>
-                  {ws.userId?.toString() === user?.id && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws._id) }}
-                      className="text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 text-xs ml-1">
-                      ✕
-                    </button>
+
+                  {/* ✅ Fixed — only show for owner */}
+                  {isWsOwner(ws) && (
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all ml-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setRenamingId(ws._id); setRenameValue(ws.name) }}
+                        className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-purple-400 hover:bg-white/10 transition-all text-xs"
+                        title="Rename">✏️</button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws._id) }}
+                        className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-white/10 transition-all text-xs"
+                        title="Delete">🗑️</button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -427,18 +352,16 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                     <div key={i}
                       className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
                       style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', border: '1px solid rgba(255,255,255,0.2)' }}
-                      title={u.name}>
-                      {u.name?.[0]?.toUpperCase()}
-                    </div>
+                      title={u.name}>{u.name?.[0]?.toUpperCase()}</div>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* ✅ Share button — only for owner */}
             {activeWorkspace && isOwner && (
               <div className="relative">
-                <button
-                  onClick={() => setShowShareCode(!showShareCode)}
+                <button onClick={() => setShowShareCode(!showShareCode)}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
                   style={{ background: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.3)', color: '#06b6d4' }}>
                   🔗 Share
@@ -446,17 +369,12 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                 {showShareCode && (
                   <div className="absolute right-0 top-12 rounded-xl p-4 z-50 w-64"
                     style={{ background: '#0f0a1e', border: '1px solid rgba(124,58,237,0.3)' }}>
-                    <p className="text-gray-400 text-xs mb-2">Share this code:</p>
+                    <p className="text-gray-400 text-xs mb-2">Share this code with collaborators:</p>
                     <div className="flex items-center gap-2">
-                      <p className="text-white font-bold text-lg tracking-widest flex-1">
-                        {activeWorkspace.shareCode}
-                      </p>
-                      <button
-                        onClick={() => copyShareCode(activeWorkspace.shareCode)}
+                      <p className="text-white font-bold text-lg tracking-widest flex-1">{activeWorkspace.shareCode}</p>
+                      <button onClick={() => copyShareCode(activeWorkspace.shareCode)}
                         className="px-3 py-1 rounded-lg text-xs text-white"
-                        style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>
-                        Copy
-                      </button>
+                        style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>Copy</button>
                     </div>
                     <p className="text-gray-600 text-xs mt-2">Anyone with this code can join</p>
                   </div>
@@ -465,21 +383,14 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
             )}
 
             {activeWorkspace && (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
+              <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-all hover:opacity-80"
                 style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>
                 {uploading ? '⏳ Uploading...' : '📎 Add Document'}
               </button>
             )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.txt,.docx"
-              className="hidden"
-              onChange={(e) => handleFileUpload(e.target.files[0])}
-            />
+            <input ref={fileInputRef} type="file" accept=".pdf,.txt,.docx" className="hidden"
+              onChange={(e) => handleFileUpload(e.target.files[0])} />
           </div>
         </div>
 
@@ -518,23 +429,17 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                 </div>
               ) : (
                 activeWorkspace.documents.map((doc, i) => (
-                  <div key={i}
-                    className="px-3 py-2 rounded-lg flex flex-col gap-1 group"
+                  <div key={i} className="px-3 py-2 rounded-lg flex flex-col gap-1 group"
                     style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
                     <div className="flex items-center gap-2">
                       <span className="text-sm flex-shrink-0">📄</span>
                       <p className="text-white text-xs truncate flex-1">{doc.fileName}</p>
                       {isOwner && (
-                        <button
-                          onClick={() => deleteDocument(i)}
-                          className="text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 text-xs flex-shrink-0">
-                          ✕
-                        </button>
+                        <button onClick={() => deleteDocument(i)}
+                          className="text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 text-xs flex-shrink-0">✕</button>
                       )}
                     </div>
-                    {doc.uploadedBy && (
-                      <p className="text-gray-600 text-xs pl-6">by {doc.uploadedBy}</p>
-                    )}
+                    {doc.uploadedBy && <p className="text-gray-600 text-xs pl-6">by {doc.uploadedBy}</p>}
                   </div>
                 ))
               )}
@@ -571,8 +476,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                 {messages.length <= 1 && activeWorkspace.documents.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-2">
                     {quickPrompts.map((prompt, i) => (
-                      <button key={i}
-                        onClick={() => setInput(prompt)}
+                      <button key={i} onClick={() => setInput(prompt)}
                         className="px-3 py-2 rounded-lg text-xs text-purple-300 transition-all hover:opacity-80"
                         style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
                         {prompt}
@@ -586,17 +490,13 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                     {msg.role === 'system' ? (
                       <div className="flex justify-center">
                         <span className="text-xs text-gray-600 px-3 py-1 rounded-full"
-                          style={{ background: 'rgba(255,255,255,0.04)' }}>
-                          {msg.content}
-                        </span>
+                          style={{ background: 'rgba(255,255,255,0.04)' }}>{msg.content}</span>
                       </div>
                     ) : (
                       <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                         <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
                           style={{
-                            background: msg.role === 'user'
-                              ? 'linear-gradient(135deg, #7c3aed44, #06b6d444)'
-                              : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                            background: msg.role === 'user' ? 'linear-gradient(135deg, #7c3aed44, #06b6d444)' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
                             border: '2px solid rgba(124,58,237,0.4)'
                           }}>
                           {msg.role === 'user' ? msg.userName?.[0]?.toUpperCase() || '?' : 'N'}
@@ -606,13 +506,10 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                             background: msg.role === 'user' ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)',
                             border: '1px solid rgba(255,255,255,0.08)'
                           }}>
-                          <p className="text-xs font-semibold mb-1"
-                            style={{ color: msg.role === 'user' ? '#a78bfa' : '#06b6d4' }}>
+                          <p className="text-xs font-semibold mb-1" style={{ color: msg.role === 'user' ? '#a78bfa' : '#06b6d4' }}>
                             {msg.userName || (msg.role === 'user' ? user?.name : 'NEURALIQ AI')}
                           </p>
-                          <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">
-                            {msg.content}
-                          </p>
+                          <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                         </div>
                       </div>
                     )}
@@ -652,33 +549,17 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                 <div ref={bottomRef} />
               </div>
 
-              <div className="px-6 py-4 flex-shrink-0"
-                style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="px-6 py-4 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <div className="flex gap-3">
-                  <input
-  type="text"
-  placeholder="Chat with your team or ask about documents..."
-  value={input}
-  onChange={handleInputChange}
-  onKeyDown={handleKeyDown}
-  disabled={loading}
-  className="flex-1 py-3 px-5 rounded-xl outline-none text-white placeholder-gray-600"
-  style={{
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.1)'
-  }}
-/>
-<button
-  onClick={sendMessage}
-  disabled={loading}
-  className="px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
-  style={{
-    background: loading
-      ? 'rgba(124,58,237,0.4)'
-      : 'linear-gradient(135deg, #7c3aed, #6d28d9)'
-  }}>
-  ➤ Ask
-</button>
+                  <input type="text" placeholder="Chat with your team or ask about documents..."
+                    value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} disabled={loading}
+                    className="flex-1 py-3 px-5 rounded-xl outline-none text-white placeholder-gray-600"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                  <button onClick={sendMessage} disabled={loading}
+                    className="px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
+                    style={{ background: loading ? 'rgba(124,58,237,0.4)' : 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
+                    ➤ Ask
+                  </button>
                 </div>
               </div>
             </div>

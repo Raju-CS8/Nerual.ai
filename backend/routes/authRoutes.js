@@ -1,13 +1,28 @@
-// routes/authRoutes.js
-// Auth route definitions
-
 const express = require('express')
 const router = express.Router()
-const { signup, login, getMe } = require('../controllers/authController')
+const multer = require('multer')
+const path = require('path')
+const { signup, login, getMe, uploadAvatar } = require('../controllers/authController')
 const { protect } = require('../middleware/authMiddleware')
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, `avatar-${Date.now()}${path.extname(file.originalname)}`)
+})
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.jpg', '.jpeg', '.png', '.webp']
+    const ext = path.extname(file.originalname).toLowerCase()
+    allowed.includes(ext) ? cb(null, true) : cb(new Error('Only images allowed'))
+  }
+})
 
 router.post('/signup', signup)
 router.post('/login', login)
-router.get('/me', protect, getMe)   // protected — needs valid JWT
+router.get('/me', protect, getMe)
+router.post('/avatar', protect, upload.single('avatar'), uploadAvatar)
 
 module.exports = router

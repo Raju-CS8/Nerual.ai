@@ -3,13 +3,8 @@ const router = express.Router()
 const multer = require('multer')
 const path = require('path')
 const {
-  getWorkspaces,
-  createWorkspace,
-  joinWorkspace,
-  addDocument,
-  chatWithWorkspace,
-  deleteDocument,
-  deleteWorkspace
+  getWorkspaces, createWorkspace, joinWorkspace, addDocument,
+  chatWithWorkspace, deleteDocument, deleteWorkspace, renameWorkspace, removeCollaborator
 } = require('../controllers/workspaceController')
 const { protect } = require('../middleware/authMiddleware')
 
@@ -33,7 +28,9 @@ router.post('/', protect, createWorkspace)
 router.post('/join', protect, joinWorkspace)
 router.post('/:workspaceId/documents', protect, upload.single('file'), addDocument)
 router.post('/:workspaceId/chat', protect, chatWithWorkspace)
+router.patch('/:workspaceId/rename', protect, renameWorkspace)
 router.delete('/:workspaceId/documents/:docIndex', protect, deleteDocument)
+router.delete('/:workspaceId/collaborator/:collabIndex', protect, removeCollaborator)
 router.delete('/:workspaceId', protect, deleteWorkspace)
 
 module.exports = router

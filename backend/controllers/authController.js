@@ -1,4 +1,3 @@
-// controllers/authController.js
 const User = require('../models/User')
 const jwt = require('jsonwebtoken')
 
@@ -13,8 +12,6 @@ const generateToken = (userId) => {
 // SIGNUP
 const signup = async (req, res) => {
   try {
-    console.log('Signup request received:', req.body) // debug log
-
     const { name, email, password } = req.body
 
     if (!name || !email || !password) {
@@ -27,8 +24,6 @@ const signup = async (req, res) => {
     }
 
     const user = await User.create({ name, email, password })
-    console.log('User created:', user._id) // debug log
-
     const token = generateToken(user._id)
 
     res.status(201).json({
@@ -38,13 +33,14 @@ const signup = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar || null,
         plan: user.plan,
         tokensUsed: user.tokensUsed,
         documentsProcessed: user.documentsProcessed,
       }
     })
   } catch (error) {
-    console.error('Signup error FULL:', error) // full error log
+    console.error('Signup error:', error)
     res.status(500).json({ error: 'Server error during signup', details: error.message })
   }
 }
@@ -52,8 +48,6 @@ const signup = async (req, res) => {
 // LOGIN
 const login = async (req, res) => {
   try {
-    console.log('Login request received:', req.body)
-
     const { email, password } = req.body
 
     if (!email || !password) {
@@ -79,13 +73,14 @@ const login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar || null,
         plan: user.plan,
         tokensUsed: user.tokensUsed,
         documentsProcessed: user.documentsProcessed,
       }
     })
   } catch (error) {
-    console.error('Login error FULL:', error)
+    console.error('Login error:', error)
     res.status(500).json({ error: 'Server error during login', details: error.message })
   }
 }
@@ -100,4 +95,41 @@ const getMe = async (req, res) => {
   }
 }
 
-module.exports = { signup, login, getMe }
+// ✅ UPLOAD AVATAR
+const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+
+    const fs = require('fs')
+    const filePath = req.file.path
+
+    const fileBuffer = fs.readFileSync(filePath)
+    const base64 = `data:${req.file.mimetype};base64,${fileBuffer.toString('base64')}`
+
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { avatar: base64 },
+      { new: true }
+    ).select('-password')
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        plan: user.plan,
+        tokensUsed: user.tokensUsed,
+        documentsProcessed: user.documentsProcessed,
+      }
+    })
+  } catch (error) {
+    console.error('Avatar upload error:', error)
+    res.status(500).json({ error: 'Avatar upload failed' })
+  }
+}
+
+module.exports = { signup, login, getMe, uploadAvatar }

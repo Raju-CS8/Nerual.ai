@@ -7,6 +7,7 @@ import Files from './pages/Files'
 import Pricing from './pages/Pricing'
 import Settings from './pages/Settings'
 import Workspace from './pages/Workspace'
+import Team from './pages/Team'
 
 function App() {
   const [activePage, setActivePage] = useState('Dashboard')
@@ -47,7 +48,6 @@ function App() {
   useEffect(() => {
     isMounted.current = true
 
-    // Handle Google OAuth redirect
     const urlParams = new URLSearchParams(window.location.search)
     const googleToken = urlParams.get('token')
     if (googleToken) {
@@ -109,6 +109,7 @@ function App() {
     Pricing:   <Pricing {...props} />,
     Settings:  <Settings {...props} />,
     Workspace: <Workspace {...props} />,
+    Team:      <Team {...props} />,
     Dashboard: <Dashboard {...props} />
   }
 
