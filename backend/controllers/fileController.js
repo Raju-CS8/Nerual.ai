@@ -21,7 +21,7 @@ const uploadAndSummarize = async (req, res) => {
       req.file.mimetype === 'application/pdf' ||
       req.file.originalname.toLowerCase().endsWith('.pdf')
     ) {
-      const pdfParse = require('pdf-parse')
+      const pdfParse = require('pdf-parse/lib/pdf-parse.js')
       const pdfData = await pdfParse(fileBuffer)
       extractedText = pdfData.text
     } else if (req.file.originalname.toLowerCase().endsWith('.docx')) {
