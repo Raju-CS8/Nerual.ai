@@ -3,6 +3,24 @@ const Groq = require('groq-sdk')
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
+// Extract text from PDF buffer using pdfjs-dist
+async function extractPDFText(buffer) {
+  const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+  pdfjsLib.GlobalWorkerOptions.workerSrc = false
+
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) })
+  const pdf = await loadingTask.promise
+
+  let fullText = ''
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    const pageText = content.items.map(item => item.str).join(' ')
+    fullText += pageText + '\n'
+  }
+  return fullText
+}
+
 // Upload and summarize
 const uploadAndSummarize = async (req, res) => {
   try {
@@ -12,7 +30,6 @@ const uploadAndSummarize = async (req, res) => {
 
     console.log('File received:', req.file.originalname)
 
-    // ✅ With memoryStorage, file is in req.file.buffer — no disk read needed
     const fileBuffer = req.file.buffer
 
     let extractedText = ''
@@ -21,15 +38,12 @@ const uploadAndSummarize = async (req, res) => {
       req.file.mimetype === 'application/pdf' ||
       req.file.originalname.toLowerCase().endsWith('.pdf')
     ) {
-      const pdfParse = require('pdf-parse/lib/pdf-parse.js')
-      const pdfData = await pdfParse(fileBuffer)
-      extractedText = pdfData.text
+      extractedText = await extractPDFText(fileBuffer)
     } else if (req.file.originalname.toLowerCase().endsWith('.docx')) {
       const mammoth = require('mammoth')
       const result = await mammoth.extractRawText({ buffer: fileBuffer })
       extractedText = result.value
     } else {
-      // .txt files
       extractedText = fileBuffer.toString('utf-8')
     }
 
