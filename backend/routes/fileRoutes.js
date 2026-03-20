@@ -6,10 +6,8 @@ const path = require('path')
 const { uploadAndSummarize, chatWithPDF } = require('../controllers/fileController')
 const { protect } = require('../middleware/authMiddleware')
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
-})
+// ✅ Use memory storage — no disk needed, works on Render
+const storage = multer.memoryStorage()
 
 const fileFilter = (req, file, cb) => {
   const allowed = ['.pdf', '.txt', '.docx']

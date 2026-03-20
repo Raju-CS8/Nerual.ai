@@ -1,7 +1,5 @@
 // controllers/fileController.js
 const Groq = require('groq-sdk')
-const fs = require('fs')
-const path = require('path')
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -13,8 +11,9 @@ const uploadAndSummarize = async (req, res) => {
     }
 
     console.log('File received:', req.file.originalname)
-    const filePath = path.resolve(req.file.path)
-    const fileBuffer = fs.readFileSync(filePath)
+
+    // ✅ With memoryStorage, file is in req.file.buffer — no disk read needed
+    const fileBuffer = req.file.buffer
 
     let extractedText = ''
 
@@ -25,11 +24,14 @@ const uploadAndSummarize = async (req, res) => {
       const pdfParse = require('pdf-parse')
       const pdfData = await pdfParse(fileBuffer)
       extractedText = pdfData.text
+    } else if (req.file.originalname.toLowerCase().endsWith('.docx')) {
+      const mammoth = require('mammoth')
+      const result = await mammoth.extractRawText({ buffer: fileBuffer })
+      extractedText = result.value
     } else {
+      // .txt files
       extractedText = fileBuffer.toString('utf-8')
     }
-
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
 
     const truncatedText = extractedText.slice(0, 8000)
 
@@ -74,12 +76,11 @@ Structure your response as:
       success: true,
       fileName: req.file.originalname,
       summary,
-      extractedText: truncatedText  // send back for PDF chat
+      extractedText: truncatedText
     })
 
   } catch (error) {
     console.error('File error:', error.message)
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path)
     res.status(500).json({ error: 'File processing failed', details: error.message })
   }
 }
