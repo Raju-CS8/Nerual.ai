@@ -19,6 +19,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes')
 const workspaceRoutes = require('./routes/workspaceRoutes')
 
 const app = express()
+app.set('trust proxy', 1)
 const server = http.createServer(app)
 
 // ✅ Allowed origins — hardcoded + env fallback
