@@ -21,16 +21,19 @@ const workspaceRoutes = require('./routes/workspaceRoutes')
 const app = express()
 const server = http.createServer(app)
 
-// ✅ Dynamic CORS for both local and production
+// ✅ Allowed origins — hardcoded + env fallback
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://nerual-ai.vercel.app',
+  'https://nerual-ai-rajus-projects-12ec0415.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean)
 
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ['GET', 'POST']
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 })
 
@@ -40,9 +43,11 @@ connectDB()
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true)
     } else {
+      console.error('CORS blocked origin:', origin)
       callback(new Error('Not allowed by CORS'))
     }
   },
