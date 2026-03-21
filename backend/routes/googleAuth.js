@@ -11,7 +11,7 @@ router.get('/google',
 
 // 🔹 Step 2: Callback from Google
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:5173/login' }),
+  passport.authenticate('google', { failureRedirect: 'https://nerual-ai.vercel.app/login' }),
   (req, res) => {
 
     // 🔥 Generate JWT (same style as your auth system)
@@ -22,7 +22,7 @@ router.get('/google/callback',
     )
 
     // 🔥 Redirect to frontend with token
-    res.redirect(`http://localhost:5173/dashboard?token=${token}`)
+    res.redirect(`https://nerual-ai.vercel.app/dashboard?token=${token}`)
   }
 )
 
