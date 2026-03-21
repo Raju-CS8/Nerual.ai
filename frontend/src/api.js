@@ -27,6 +27,16 @@ export const getMeAPI = async () => {
   return res.json()
 }
 
+// ✅ Update name
+export const updateNameAPI = async (name) => {
+  const res = await fetch(`${BASE_URL}/auth/name`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+    body: JSON.stringify({ name })
+  })
+  return res.json()
+}
+
 // ─── CHAT ─────────────────────────────────────────────────────
 export const sendMessageAPI = async (message, chatId = null, history = []) => {
   const res = await fetch(`${BASE_URL}/chat`, {

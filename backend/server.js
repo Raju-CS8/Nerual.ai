@@ -44,7 +44,6 @@ connectDB()
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true)
     } else {
@@ -171,6 +170,16 @@ io.on('connection', (socket) => {
     console.log('User disconnected:', socket.id)
   })
 })
+
+// ✅ Keep Render free tier alive — ping every 14 minutes
+const https = require('https')
+setInterval(() => {
+  https.get('https://nerual-ai.onrender.com', (res) => {
+    console.log(`Keep-alive ping: ${res.statusCode}`)
+  }).on('error', (err) => {
+    console.log('Keep-alive error:', err.message)
+  })
+}, 14 * 60 * 1000)
 
 server.listen(PORT, () => {
   console.log(`✅ NEURALIQ backend running at http://localhost:${PORT}`)

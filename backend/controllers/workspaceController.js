@@ -12,7 +12,7 @@ const getWorkspaces = async (req, res) => {
       ]
     })
       .sort({ updatedAt: -1 })
-      .select('name documents updatedAt shareCode collaborators userId')
+      .select('name documents messages updatedAt shareCode collaborators userId')
     res.json({ success: true, workspaces })
   } catch (error) {
     res.status(500).json({ error: 'Could not fetch workspaces' })

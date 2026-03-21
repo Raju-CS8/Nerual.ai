@@ -29,7 +29,6 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
   const typingTimeout = useRef(null)
   const activeWorkspaceRef = useRef(null)
 
-  // ✅ Fix — support both _id and id
   const userId = user?._id || user?.id
 
   useEffect(() => { activeWorkspaceRef.current = activeWorkspace }, [activeWorkspace])
@@ -106,21 +105,43 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
           return exists ? prev : [data.workspace, ...prev]
         })
         setActiveWorkspace(data.workspace)
-        setMessages([{ role: 'assistant', content: `✅ Joined workspace "${data.workspace.name}"! You can now collaborate!`, userName: 'NEURALIQ AI' }])
+        // ✅ Load chat history when joining
+        const savedMessages = (data.workspace.messages || []).map(m => ({
+          role: m.role, content: m.content, userName: m.userName
+        }))
+        if (savedMessages.length > 0) {
+          setMessages([
+            ...savedMessages,
+            { role: 'system', content: `✅ You joined "${data.workspace.name}"!`, userName: 'System' }
+          ])
+        } else {
+          setMessages([{ role: 'assistant', content: `✅ Joined workspace "${data.workspace.name}"! You can now collaborate!`, userName: 'NEURALIQ AI' }])
+        }
         setShareCode('')
         setJoining(false)
       } else { setJoinError(data.error || 'Invalid share code') }
     } catch { setJoinError('Could not join workspace') }
   }
 
+  // ✅ Load chat history when selecting workspace
   const selectWorkspace = (ws) => {
     setActiveWorkspace(ws)
     setOnlineUsers([])
-    setMessages([{
-      role: 'assistant',
-      content: `Workspace "${ws.name}" loaded with ${ws.documents.length} document(s). ${ws.collaborators?.length > 0 ? `${ws.collaborators.length} collaborator(s).` : ''} Ask me anything!`,
-      userName: 'NEURALIQ AI'
-    }])
+    const savedMessages = (ws.messages || []).map(m => ({
+      role: m.role, content: m.content, userName: m.userName
+    }))
+    if (savedMessages.length > 0) {
+      setMessages([
+        ...savedMessages,
+        { role: 'system', content: `— You rejoined "${ws.name}" —`, userName: 'System' }
+      ])
+    } else {
+      setMessages([{
+        role: 'assistant',
+        content: `Workspace "${ws.name}" loaded with ${ws.documents.length} document(s). ${ws.collaborators?.length > 0 ? `${ws.collaborators.length} collaborator(s).` : ''} Ask me anything!`,
+        userName: 'NEURALIQ AI'
+      }])
+    }
   }
 
   const handleFileUpload = async (file) => {
@@ -212,7 +233,6 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
 
   const copyShareCode = (code) => { navigator.clipboard.writeText(code); alert(`Share code copied: ${code}`) }
 
-  // ✅ Fixed ownership check using _id
   const isOwner = activeWorkspace?.userId?.toString() === userId
   const isWsOwner = (ws) => ws.userId?.toString() === userId
 
@@ -295,7 +315,6 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                       ) : (
                         <p className="text-white text-xs font-medium truncate">{ws.name}</p>
                       )}
-                      {/* ✅ Fixed shared tag */}
                       {!isWsOwner(ws) && (
                         <span className="text-xs text-cyan-400 flex-shrink-0">shared</span>
                       )}
@@ -305,18 +324,12 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                       {ws.collaborators?.length > 0 && ` · ${ws.collaborators.length} collab`}
                     </p>
                   </div>
-
-                  {/* ✅ Fixed — only show for owner */}
                   {isWsOwner(ws) && (
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all ml-1 flex-shrink-0">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setRenamingId(ws._id); setRenameValue(ws.name) }}
-                        className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-purple-400 hover:bg-white/10 transition-all text-xs"
-                        title="Rename">✏️</button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws._id) }}
-                        className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-white/10 transition-all text-xs"
-                        title="Delete">🗑️</button>
+                      <button onClick={(e) => { e.stopPropagation(); setRenamingId(ws._id); setRenameValue(ws.name) }}
+                        className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-purple-400 hover:bg-white/10 transition-all text-xs">✏️</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteWorkspace(ws._id) }}
+                        className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-white/10 transition-all text-xs">🗑️</button>
                     </div>
                   )}
                 </div>
@@ -358,7 +371,6 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
               </div>
             )}
 
-            {/* ✅ Share button — only for owner */}
             {activeWorkspace && isOwner && (
               <div className="relative">
                 <button onClick={() => setShowShareCode(!showShareCode)}

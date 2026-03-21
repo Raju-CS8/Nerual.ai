@@ -2,16 +2,12 @@ const express = require('express')
 const router = express.Router()
 const multer = require('multer')
 const path = require('path')
-const { signup, login, getMe, uploadAvatar } = require('../controllers/authController')
+const { signup, login, getMe, uploadAvatar, updateName } = require('../controllers/authController')
 const { protect } = require('../middleware/authMiddleware')
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, `avatar-${Date.now()}${path.extname(file.originalname)}`)
-})
-
+// ✅ Memory storage — no disk needed on Render
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ['.jpg', '.jpeg', '.png', '.webp']
@@ -24,5 +20,6 @@ router.post('/signup', signup)
 router.post('/login', login)
 router.get('/me', protect, getMe)
 router.post('/avatar', protect, upload.single('avatar'), uploadAvatar)
+router.patch('/name', protect, updateName)
 
 module.exports = router
