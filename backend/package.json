@@ -25,8 +25,7 @@
         "multer": "^2.1.1",
         "passport": "^0.7.0",
         "passport-google-oauth20": "^2.0.0",
-        "pdf-parse": "^1.1.1",
-        "pdfjs-dist": "^5.5.207",
+        "pdf-parse": "^1.1.4",
         "sharp": "^0.34.5",
         "socket.io": "^4.8.3"
     },

@@ -56,20 +56,15 @@ const addDocument = async (req, res) => {
     const { workspaceId } = req.params
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
 
-    // ✅ Use req.file.buffer — memoryStorage, no disk access needed
+    // ✅ memoryStorage — file is in req.file.buffer, no disk access needed
     const fileBuffer = req.file.buffer
     let extractedText = ''
 
     if (req.file.originalname.toLowerCase().endsWith('.pdf')) {
-      const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
-      pdfjsLib.GlobalWorkerOptions.workerSrc = false
-      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(fileBuffer) })
-      const pdf = await loadingTask.promise
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i)
-        const content = await page.getTextContent()
-        extractedText += content.items.map(item => item.str).join(' ') + '\n'
-      }
+      // ✅ Use pdf-parse/lib directly to avoid ENOENT test-file bug
+      const pdfParse = require('pdf-parse/lib/pdf-parse.js')
+      const pdfData = await pdfParse(fileBuffer)
+      extractedText = pdfData.text
     } else if (req.file.originalname.toLowerCase().endsWith('.docx')) {
       const mammoth = require('mammoth')
       const result = await mammoth.extractRawText({ buffer: fileBuffer })
