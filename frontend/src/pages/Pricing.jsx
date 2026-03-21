@@ -22,7 +22,7 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
       } else {
         // Downgrade to free
         const token = localStorage.getItem('neuraliq_token')
-        const res = await fetch('http://localhost:5000/api/subscription/downgrade', {
+        const res = await fetch('https://nerual-ai.onrender.com/api/subscription/downgrade', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         })

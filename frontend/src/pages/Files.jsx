@@ -43,7 +43,7 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch('http://localhost:5000/api/files/upload', {
+      const res = await fetch('https://nerual-ai.onrender.com/api/files/upload', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -86,7 +86,7 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
 
     try {
       const token = localStorage.getItem('neuraliq_token')
-      const res = await fetch('http://localhost:5000/api/files/chat', {
+      const res = await fetch('https://nerual-ai.onrender.com/api/files/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

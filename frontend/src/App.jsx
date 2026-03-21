@@ -23,7 +23,7 @@ function App() {
   }, [])
 
   const fetchUser = useCallback((token) => {
-    fetch('http://localhost:5000/api/auth/me', {
+    fetch('https://nerual-ai.onrender.com/api/auth/me', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
