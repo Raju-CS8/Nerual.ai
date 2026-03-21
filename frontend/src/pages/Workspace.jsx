@@ -390,7 +390,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
               </button>
             )}
             <input ref={fileInputRef} type="file" accept=".pdf,.txt,.docx" className="hidden"
-              onChange={(e) => handleFileUpload(e.target.files[0])} />
+              onChange={(e) => { handleFileUpload(e.target.files[0]); e.target.value = '' }} />
           </div>
         </div>
 
