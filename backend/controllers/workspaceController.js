@@ -56,21 +56,28 @@ const addDocument = async (req, res) => {
     const { workspaceId } = req.params
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
 
-    const fs = require('fs')
-    const path = require('path')
-    const filePath = path.resolve(req.file.path)
-    const fileBuffer = fs.readFileSync(filePath)
+    // ✅ Use req.file.buffer — memoryStorage, no disk access needed
+    const fileBuffer = req.file.buffer
     let extractedText = ''
 
     if (req.file.originalname.toLowerCase().endsWith('.pdf')) {
-      const pdfParse = require('pdf-parse')
-      const pdfData = await pdfParse(fileBuffer)
-      extractedText = pdfData.text
+      const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+      pdfjsLib.GlobalWorkerOptions.workerSrc = false
+      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(fileBuffer) })
+      const pdf = await loadingTask.promise
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const content = await page.getTextContent()
+        extractedText += content.items.map(item => item.str).join(' ') + '\n'
+      }
+    } else if (req.file.originalname.toLowerCase().endsWith('.docx')) {
+      const mammoth = require('mammoth')
+      const result = await mammoth.extractRawText({ buffer: fileBuffer })
+      extractedText = result.value
     } else {
       extractedText = fileBuffer.toString('utf-8')
     }
 
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
     if (!extractedText.trim()) return res.status(400).json({ error: 'Could not extract text from file' })
 
     const workspace = await Workspace.findOneAndUpdate(
@@ -162,7 +169,6 @@ const deleteWorkspace = async (req, res) => {
   }
 }
 
-// ✅ Rename workspace
 const renameWorkspace = async (req, res) => {
   try {
     const { name } = req.body
@@ -179,7 +185,6 @@ const renameWorkspace = async (req, res) => {
   }
 }
 
-// ✅ Remove collaborator
 const removeCollaborator = async (req, res) => {
   try {
     const workspace = await Workspace.findOne({ _id: req.params.workspaceId, userId: req.user.id })

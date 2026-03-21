@@ -8,13 +8,9 @@ const {
 } = require('../controllers/workspaceController')
 const { protect } = require('../middleware/authMiddleware')
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
-})
-
+// ✅ Memory storage — no disk needed, works on Render
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ['.pdf', '.txt', '.docx']
