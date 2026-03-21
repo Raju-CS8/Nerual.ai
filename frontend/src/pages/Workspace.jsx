@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 import Sidebar from '../components/Sidebar'
 import { useSocket } from '../hooks/useSocket'
 import {
@@ -6,6 +7,25 @@ import {
   chatWithWorkspaceAPI, deleteDocumentAPI, deleteWorkspaceAPI,
   joinWorkspaceAPI, renameWorkspaceAPI
 } from '../api'
+
+const MarkdownMessage = ({ content }) => (
+  <ReactMarkdown
+    className="text-gray-200 text-sm leading-relaxed"
+    components={{
+      code: ({ inline, children, ...props }) => inline
+        ? <code className="px-1 py-0.5 rounded text-xs font-mono" style={{ background: 'rgba(124,58,237,0.3)', color: '#e2d9f3' }} {...props}>{children}</code>
+        : <pre className="p-3 rounded-lg overflow-x-auto my-2" style={{ background: 'rgba(0,0,0,0.3)' }}><code className="text-xs font-mono text-green-300" {...props}>{children}</code></pre>,
+      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+      ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+      ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+      strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+      h1: ({ children }) => <h1 className="text-lg font-bold text-white mb-2">{children}</h1>,
+      h2: ({ children }) => <h2 className="text-base font-bold text-white mb-2">{children}</h2>,
+      h3: ({ children }) => <h3 className="text-sm font-bold text-white mb-1">{children}</h3>,
+    }}>
+    {content}
+  </ReactMarkdown>
+)
 
 export default function Workspace({ activePage, setActivePage, user, onLogout }) {
   const [workspaces, setWorkspaces] = useState([])
@@ -105,15 +125,11 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
           return exists ? prev : [data.workspace, ...prev]
         })
         setActiveWorkspace(data.workspace)
-        // ✅ Load chat history when joining
         const savedMessages = (data.workspace.messages || []).map(m => ({
           role: m.role, content: m.content, userName: m.userName
         }))
         if (savedMessages.length > 0) {
-          setMessages([
-            ...savedMessages,
-            { role: 'system', content: `✅ You joined "${data.workspace.name}"!`, userName: 'System' }
-          ])
+          setMessages([...savedMessages, { role: 'system', content: `✅ You joined "${data.workspace.name}"!`, userName: 'System' }])
         } else {
           setMessages([{ role: 'assistant', content: `✅ Joined workspace "${data.workspace.name}"! You can now collaborate!`, userName: 'NEURALIQ AI' }])
         }
@@ -123,7 +139,6 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
     } catch { setJoinError('Could not join workspace') }
   }
 
-  // ✅ Load chat history when selecting workspace
   const selectWorkspace = (ws) => {
     setActiveWorkspace(ws)
     setOnlineUsers([])
@@ -131,10 +146,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
       role: m.role, content: m.content, userName: m.userName
     }))
     if (savedMessages.length > 0) {
-      setMessages([
-        ...savedMessages,
-        { role: 'system', content: `— You rejoined "${ws.name}" —`, userName: 'System' }
-      ])
+      setMessages([...savedMessages, { role: 'system', content: `— You rejoined "${ws.name}" —`, userName: 'System' }])
     } else {
       setMessages([{
         role: 'assistant',
@@ -244,7 +256,6 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
 
       <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
-      {/* Workspaces Panel */}
       <div className="w-64 flex flex-col py-4 px-3 gap-3 flex-shrink-0"
         style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
 
@@ -252,13 +263,9 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
           <p className="text-xs text-gray-500 uppercase tracking-widest">Workspaces</p>
           <div className="flex gap-1">
             <button onClick={() => { setJoining(!joining); setCreating(false) }}
-              className="text-xs px-2 py-1 rounded-lg text-cyan-400 hover:bg-cyan-400/10 transition-all">
-              Join
-            </button>
+              className="text-xs px-2 py-1 rounded-lg text-cyan-400 hover:bg-cyan-400/10 transition-all">Join</button>
             <button onClick={() => { setCreating(!creating); setJoining(false) }}
-              className="text-xs px-2 py-1 rounded-lg text-purple-400 hover:bg-purple-400/10 transition-all">
-              + New
-            </button>
+              className="text-xs px-2 py-1 rounded-lg text-purple-400 hover:bg-purple-400/10 transition-all">+ New</button>
           </div>
         </div>
 
@@ -305,19 +312,14 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                       {renamingId === ws._id ? (
                         <input type="text" value={renameValue}
                           onChange={(e) => setRenameValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleRenameWorkspace(ws._id)
-                            if (e.key === 'Escape') setRenamingId(null)
-                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleRenameWorkspace(ws._id); if (e.key === 'Escape') setRenamingId(null) }}
                           onBlur={() => handleRenameWorkspace(ws._id)}
                           className="w-full text-xs text-white bg-transparent outline-none border-b border-purple-400"
                           autoFocus onClick={(e) => e.stopPropagation()} />
                       ) : (
                         <p className="text-white text-xs font-medium truncate">{ws.name}</p>
                       )}
-                      {!isWsOwner(ws) && (
-                        <span className="text-xs text-cyan-400 flex-shrink-0">shared</span>
-                      )}
+                      {!isWsOwner(ws) && <span className="text-xs text-cyan-400 flex-shrink-0">shared</span>}
                     </div>
                     <p className="text-gray-600 text-xs mt-1">
                       {ws.documents.length} doc{ws.documents.length !== 1 ? 's' : ''}
@@ -339,10 +341,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
         </div>
       </div>
 
-      {/* Main Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* Header */}
         <div className="px-6 py-4 flex-shrink-0 flex items-center justify-between"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div>
@@ -362,8 +361,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                 <span className="text-green-400 text-xs">{onlineUsers.length} online</span>
                 <div className="flex -space-x-1">
                   {onlineUsers.slice(0, 3).map((u, i) => (
-                    <div key={i}
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                    <div key={i} className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
                       style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', border: '1px solid rgba(255,255,255,0.2)' }}
                       title={u.name}>{u.name?.[0]?.toUpperCase()}</div>
                   ))}
@@ -410,26 +408,18 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div className="text-6xl">📁</div>
             <h2 className="text-white text-xl font-medium">Select a Workspace</h2>
-            <p className="text-gray-500 text-sm text-center max-w-sm">
-              Create a workspace and collaborate with others in real-time!
-            </p>
+            <p className="text-gray-500 text-sm text-center max-w-sm">Create a workspace and collaborate with others in real-time!</p>
             <div className="flex gap-3">
               <button onClick={() => setCreating(true)}
                 className="px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
-                + Create Workspace
-              </button>
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>+ Create Workspace</button>
               <button onClick={() => setJoining(true)}
                 className="px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>
-                🔗 Join with Code
-              </button>
+                style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>🔗 Join with Code</button>
             </div>
           </div>
         ) : (
           <div className="flex-1 flex overflow-hidden">
-
-            {/* Documents Panel */}
             <div className="w-52 flex flex-col py-4 px-3 gap-2 flex-shrink-0"
               style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
               <p className="text-xs text-gray-500 uppercase tracking-widest px-1">Documents</p>
@@ -481,7 +471,6 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
               )}
             </div>
 
-            {/* Chat Area */}
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
 
@@ -521,7 +510,10 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                           <p className="text-xs font-semibold mb-1" style={{ color: msg.role === 'user' ? '#a78bfa' : '#06b6d4' }}>
                             {msg.userName || (msg.role === 'user' ? user?.name : 'NEURALIQ AI')}
                           </p>
-                          <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                          {msg.role === 'assistant'
+                            ? <MarkdownMessage content={msg.content} />
+                            : <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                          }
                         </div>
                       </div>
                     )}
