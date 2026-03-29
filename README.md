@@ -1,4 +1,5 @@
-# NEURALIQ
+# NEURALIQ  
+Deployed Try it out>>>https://nerual-ai.vercel.app
 
 NEURALIQ is a full-stack real-time collaborative AI workspace platform. The application allows users to create workspaces, collaborate in real-time, share documents, and interact with an AI assistant.
 
