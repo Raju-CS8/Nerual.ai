@@ -1,75 +1,99 @@
-# NEURALIQ  
-Deployed Try it out>>>https://nerual-ai.vercel.app
+<div align="center">
 
-NEURALIQ is a full-stack real-time collaborative AI workspace platform. The application allows users to create workspaces, collaborate in real-time, share documents, and interact with an AI assistant.
+<img src="https://img.shields.io/badge/NEURALIQ-AI%20Workspace-7c3aed?style=for-the-badge&logo=openai&logoColor=white" />
 
-## Tech Stack
+# 🧠 NEURALIQ
 
-### Frontend
-- **Framework**: React 19 (Vite)
-- **Styling**: Tailwind CSS, PostCSS, Autoprefixer
-- **State & Real-time**: Socket.io-client
-- **Document Processing**:
-  - `docx` & `jspdf` for generating documents
-  - `html2canvas` for capturing UI elements
-  - `file-saver` for file downloads
-- **Key Pages**:
-  - Dashboard, Workspace, Chat, Files, Team, Settings, Pricing, Login
+### ⚡ The Next-Gen AI Workspace Platform
 
-### Backend
-- **Framework**: Node.js, Express.js
-- **Database**: MongoDB (Mongoose models: `User`, `Workspace`, `Chat`, `Usage`)
-- **Real-time**: Socket.io for workspace collaboration, chat, and document sync
-- **Authentication**: Passport.js (Local & Google OAuth 2.0), JWT (`jsonwebtoken`), and Bcrypt (`bcryptjs`)
-- **AI Integration**: Groq SDK (`groq-sdk`) for intelligent chat and generation
-- **Rate Limiting**: `express-rate-limit` for API, Auth, Chat, and Uploads protection
-- **File Handling**: `multer` for uploads, `sharp` for image processing, `pdf-parse` for reading PDFs, `mammoth` for DOCX processing
+> 💬 Chat with AI • 📄 Analyze Documents • 🤝 Collaborate in Real-Time
 
-## Project Structure
+<br/>
 
-```text
-neuraliq/
-├── backend/
-│   ├── config/          # DB and Passport configurations
-│   ├── controllers/     # API logic
-│   ├── middleware/      # Auth & Rate Limiter middlewares
-│   ├── models/          # DB schemas (Chat, Usage, User, Workspace)
-│   ├── routes/          # API routes (Auth, Chat, Files, Subs, Workspace)
-│   ├── uploads/         # Local file storage
-│   └── server.js        # Entry point for Express & Socket.io
-│
-├── frontend/
-│   ├── public/          # Static assets
-│   ├── src/
-│   │   ├── api.js       # API integration
-│   │   ├── assets/      
-│   │   ├── components/  # Reusable UI components
-│   │   ├── hooks/       # Custom React hooks
-│   │   └── pages/       # React pages (Dashboard, Workspace, Chat, etc.)
-│   ├── index.html       
-│   ├── vite.config.js   
-│   └── tailwind.config.js
-```
+[![Live App](https://img.shields.io/badge/🌐%20Live%20App-Visit%20Now-7c3aed?style=for-the-badge)](https://nerual-ai.vercel.app)
+[![Backend](https://img.shields.io/badge/🚀%20Backend-API-06b6d4?style=for-the-badge)](https://nerual-ai.onrender.com)
 
-## Features Complete
+<br/>
 
-- **Authentication System**: Secure login/signup system via Local and Google OAuth using Passport.js.
-- **Real-Time Collaboration**: Workspaces support real-time user presence, typing indicators, live chat, and document syncing powered by Socket.io.
-- **AI Integration**: AI assistant within the workspace using the Groq API.
-- **Document Handlers**: Capability to parse, generate, and process PDFs, Word documents, and images natively within the app.
-- **Usage & Subscription**: Built-in architecture for tracking usage and pricing tiers.
-- **Security**: Robust rate-limiting across general API, authentication, chat, and document uploads.
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
+![Node](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js)
+![MongoDB](https://img.shields.io/badge/MongoDB-Database-47A248?logo=mongodb)
+![Socket.io](https://img.shields.io/badge/Realtime-Socket.io-black?logo=socket.io)
+![AI](https://img.shields.io/badge/AI-LLaMA%203.3-F55036)
 
-## How to Run Locally
+</div>
 
-### Start Backend
-1. `cd backend`
-2. Create `.env` file containing `JWT_SECRET`, `MONGO_URI`, `GROQ_API_KEY`, etc.
-3. `npm install`
-4. `npm run dev` (Runs on http://localhost:5000)
+---
 
-### Start Frontend
-1. `cd frontend`
-2. Create `.env.production` / `.env.local`
-3. `npm install`
-4. `npm run dev` (Runs on http://localhost:5173)
+# 🚀 What is NEURALIQ?
+
+**NEURALIQ is not just a chatbot.**
+
+It’s a **complete AI productivity ecosystem** designed for:
+
+- 🧠 Intelligent conversations  
+- 📄 Document understanding  
+- 🤝 Team collaboration  
+- 📊 Usage analytics  
+
+---
+
+# 🔥 Why NEURALIQ Stands Out
+
+> ⚡ These features are **NOT in ChatGPT**
+
+- 🧠 AI remembers conversations **per workspace**
+- 🤝 **Real-time multi-user AI chat**
+- 📄 AI understands **multiple uploaded documents**
+- 📊 Built-in **usage analytics dashboard**
+- 💳 Token-based **subscription system**
+
+---
+
+# ✨ Core Features
+
+## 🔐 Authentication
+- Email + Password login
+- Google OAuth 2.0
+- JWT secure sessions
+
+---
+
+## 📊 Smart Dashboard
+- Real-time token tracking
+- 7-day usage graph
+- Documents processed counter
+- ⚠️ Token warning system (80% alert)
+
+---
+
+## 🤖 AI Chat System
+- Powered by **LLaMA 3.3 (Groq)**
+- Persistent chat history
+- Token usage tracking
+
+---
+
+## 📄 Document Intelligence
+- Upload: PDF / DOCX / TXT
+- AI summarization
+- Ask questions from documents
+
+---
+
+## 🤝 Real-Time Collaboration
+- Shared workspaces
+- Live chat via Socket.io
+- Typing indicators & presence
+
+---
+
+## 💳 Subscription System
+| Plan | Features |
+|------|--------|
+| 🆓 Free | 100K tokens |
+| ⭐ Pro | Unlimited + Faster responses |
+
+---
+
+# 🏗 Architecture
