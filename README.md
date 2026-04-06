@@ -1,99 +1,234 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/NEURALIQ-AI%20Workspace-7c3aed?style=for-the-badge&logo=openai&logoColor=white" />
-
 # 🧠 NEURALIQ
 
-### ⚡ The Next-Gen AI Workspace Platform
+### ⚡ AI-Powered Collaborative Workspace Platform
 
-> 💬 Chat with AI • 📄 Analyze Documents • 🤝 Collaborate in Real-Time
+> 💬 Chat with AI · 📄 Analyze Documents · 🤝 Collaborate in Real-Time
 
 <br/>
 
 [![Live App](https://img.shields.io/badge/🌐%20Live%20App-Visit%20Now-7c3aed?style=for-the-badge)](https://nerual-ai.vercel.app)
-[![Backend](https://img.shields.io/badge/🚀%20Backend-API-06b6d4?style=for-the-badge)](https://nerual-ai.onrender.com)
-
-<br/>
-
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
-![Node](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js)
-![MongoDB](https://img.shields.io/badge/MongoDB-Database-47A248?logo=mongodb)
-![Socket.io](https://img.shields.io/badge/Realtime-Socket.io-black?logo=socket.io)
-![AI](https://img.shields.io/badge/AI-LLaMA%203.3-F55036)
+[![Backend](https://img.shields.io/badge/🚀%20Backend%20API-Active-06b6d4?style=for-the-badge)](https://nerual-ai.onrender.com)
+[![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)](LICENSE)
 
 </div>
 
 ---
 
-# 🚀 What is NEURALIQ?
+# 🚀 Project Overview
 
-**NEURALIQ is not just a chatbot.**
+**NEURALIQ** is a full-stack AI workspace platform that combines:
 
-It’s a **complete AI productivity ecosystem** designed for:
+- 🤖 Personal AI Chat  
+- 📄 Document Intelligence  
+- 🤝 Real-Time Team Collaboration  
 
-- 🧠 Intelligent conversations  
-- 📄 Document understanding  
-- 🤝 Team collaboration  
-- 📊 Usage analytics  
-
----
-
-# 🔥 Why NEURALIQ Stands Out
-
-> ⚡ These features are **NOT in ChatGPT**
-
-- 🧠 AI remembers conversations **per workspace**
-- 🤝 **Real-time multi-user AI chat**
-- 📄 AI understands **multiple uploaded documents**
-- 📊 Built-in **usage analytics dashboard**
-- 💳 Token-based **subscription system**
+👉 All in **one unified system**
 
 ---
 
-# ✨ Core Features
+# 🧠 Core Idea
 
-## 🔐 Authentication
-- Email + Password login
-- Google OAuth 2.0
-- JWT secure sessions
+### ❌ Problem
+- AI tools don’t remember history  
+- No document understanding  
+- No team collaboration  
 
----
+### ✅ Solution — NEURALIQ
 
-## 📊 Smart Dashboard
-- Real-time token tracking
-- 7-day usage graph
-- Documents processed counter
-- ⚠️ Token warning system (80% alert)
+- 🧠 Persistent AI memory  
+- 📄 AI-powered document analysis  
+- 🤝 Real-time collaborative workspaces  
 
 ---
 
-## 🤖 AI Chat System
-- Powered by **LLaMA 3.3 (Groq)**
-- Persistent chat history
-- Token usage tracking
+# 🔥 Why NEURALIQ is Different
+
+> ⚡ This is NOT in ChatGPT
+
+- 🧠 AI remembers chats per workspace  
+- 🤝 Multi-user AI collaboration  
+- 📄 Upload documents → chat with them  
+- 📊 Built-in analytics dashboard  
+- 💳 Token-based subscription system  
 
 ---
 
-## 📄 Document Intelligence
-- Upload: PDF / DOCX / TXT
-- AI summarization
-- Ask questions from documents
+# ✨ Key Features
+
+| Feature | Description |
+|---|---|
+| 🔐 Authentication | Email + Google OAuth |
+| 🤖 AI Chat | Persistent conversations |
+| 📄 Document AI | Upload & analyze files |
+| 🤝 Collaboration | Live workspace chat |
+| 📊 Analytics | Token usage tracking |
+| 💳 Plans | Free vs Pro system |
+| 📤 Export | Chat → PDF / DOCX |
+| 🛡 Security | Rate limiting + JWT |
 
 ---
 
-## 🤝 Real-Time Collaboration
-- Shared workspaces
-- Live chat via Socket.io
-- Typing indicators & presence
+# 🏗 System Architecture
+Frontend (React)
+↓
+REST API + WebSocket
+↓
+Backend (Node.js)
+↓
+MongoDB + Groq AI
 
 ---
 
-## 💳 Subscription System
-| Plan | Features |
-|------|--------|
-| 🆓 Free | 100K tokens |
-| ⭐ Pro | Unlimited + Faster responses |
+# 🛠 Tech Stack
+
+## 🎨 Frontend
+- React 19 (Vite)
+- Tailwind CSS
+- Socket.io-client
+- Recharts
+
+## ⚙️ Backend
+- Node.js + Express
+- MongoDB + Mongoose
+- Passport.js (OAuth)
+- JWT Authentication
+- Multer (Uploads)
+
+## 🤖 AI
+- Groq API (LLaMA 3.3 70B)
 
 ---
 
-# 🏗 Architecture
+# 📁 Project Structure
+neuraliq/
+├── backend/
+├── frontend/
+
+---
+
+# 🗄 Database Design
+
+### User
+- name, email, password  
+- googleId (OAuth)  
+- plan (free / pro)  
+- tokensUsed, documentsProcessed  
+
+### Chat
+- messages history  
+- title  
+
+### Workspace
+- collaborators  
+- documents  
+- messages  
+
+### Usage
+- daily token usage  
+- message count  
+
+---
+
+# 📡 API Overview
+
+## Auth
+- POST `/signup`
+- POST `/login`
+- GET `/me`
+
+## Chat
+- POST `/`
+- GET `/history`
+- GET `/stats`
+
+## Files
+- POST `/upload`
+- POST `/chat`
+
+## Workspace
+- Create / Join / Chat / Manage
+
+---
+
+# ⚡ Real-Time (Socket.io)
+
+- Join workspace
+- Live chat messages
+- Typing indicators
+- Online users tracking
+
+---
+
+# 📊 Frontend Pages
+
+- Login  
+- Dashboard  
+- Chat  
+- Workspace  
+- Files  
+- Team  
+- Settings  
+- Pricing  
+
+---
+
+# 🤖 AI Configuration
+
+- Model: LLaMA 3.3 (Groq)
+- Context-aware chats
+- Document Q&A support
+- Token-based limits
+
+---
+
+# 🔒 Security
+
+- JWT Authentication  
+- bcrypt password hashing  
+- Rate limiting  
+- Secure file handling  
+
+---
+
+# 🔑 Environment Variables
+
+```env
+PORT=5000
+MONGO_URI=your_mongo_uri
+JWT_SECRET=your_secret
+GROQ_API_KEY=your_key
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_secret
+
+🚀 Run Locally
+Backend
+cd backend
+npm install
+npm run dev
+Frontend
+cd frontend
+npm install
+npm run dev
+☁️ Deployment
+Service	Platform
+Frontend	Vercel
+Backend	Render
+Database	MongoDB Atlas
+🔮 Future Features
+💳 Payment integration
+📱 Mobile version
+🧠 AI memory engine
+📊 Advanced analytics
+👨‍💻 Author
+
+Raju
+MCA @ Christ University
+Full Stack Developer | AI Enthusiast
+
+<div align="center">
+
+⭐ Star this repo if you like it!
+
+</div> ```
