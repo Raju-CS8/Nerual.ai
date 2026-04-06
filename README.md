@@ -211,6 +211,7 @@ Frontend
 cd frontend
 npm install
 npm run dev
+
 ☁️ Deployment
 Service	Platform
 Frontend	Vercel
@@ -227,8 +228,7 @@ Raju
 MCA @ Christ University
 Full Stack Developer | AI Enthusiast
 
-<div align="center">
 
 ⭐ Star this repo if you like it!
 
-</div> ```
+
