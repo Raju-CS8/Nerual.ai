@@ -7,22 +7,23 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import { saveAs } from 'file-saver'
 
 const MarkdownMessage = ({ content }) => (
-  <ReactMarkdown
-    className="text-gray-200 text-sm leading-relaxed"
-    components={{
-      code: ({ inline, children, ...props }) => inline
-        ? <code className="px-1 py-0.5 rounded text-xs font-mono" style={{ background: 'rgba(124,58,237,0.3)', color: '#e2d9f3' }} {...props}>{children}</code>
-        : <pre className="p-3 rounded-lg overflow-x-auto my-2" style={{ background: 'rgba(0,0,0,0.3)' }}><code className="text-xs font-mono text-green-300" {...props}>{children}</code></pre>,
-      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-      ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
-      ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
-      strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
-      h1: ({ children }) => <h1 className="text-lg font-bold text-white mb-2">{children}</h1>,
-      h2: ({ children }) => <h2 className="text-base font-bold text-white mb-2">{children}</h2>,
-      h3: ({ children }) => <h3 className="text-sm font-bold text-white mb-1">{children}</h3>,
-    }}>
-    {content}
-  </ReactMarkdown>
+  <div className="text-gray-200 text-sm leading-relaxed">
+    <ReactMarkdown
+      components={{
+        code: ({ inline, children, ...props }) => inline
+          ? <code className="px-1 py-0.5 rounded text-xs font-mono" style={{ background: 'rgba(124,58,237,0.3)', color: '#e2d9f3' }} {...props}>{children}</code>
+          : <pre className="p-3 rounded-lg overflow-x-auto my-2" style={{ background: 'rgba(0,0,0,0.3)' }}><code className="text-xs font-mono text-green-300" {...props}>{children}</code></pre>,
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+        strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+        h1: ({ children }) => <h1 className="text-lg font-bold text-white mb-2">{children}</h1>,
+        h2: ({ children }) => <h2 className="text-base font-bold text-white mb-2">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-sm font-bold text-white mb-1">{children}</h3>,
+      }}>
+      {content}
+    </ReactMarkdown>
+  </div>
 )
 
 const timeAgo = (date) => {
@@ -52,14 +53,14 @@ export default function Chat({ activePage, setActivePage, user }) {
 
   useEffect(() => {
     let mounted = true
-    getChatsAPI().then(data => { if (mounted && data.success) setConversations(data.chats) }).catch(() => {})
+    getChatsAPI().then(data => { if (mounted && data.success) setConversations(data.chats) }).catch(() => { })
     return () => { mounted = false }
   }, [])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const refreshChats = () => {
-    getChatsAPI().then(data => { if (data.success) setConversations(data.chats) }).catch(() => {})
+    getChatsAPI().then(data => { if (data.success) setConversations(data.chats) }).catch(() => { })
   }
 
   const loadChat = async (id) => {
