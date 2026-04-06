@@ -202,33 +202,36 @@ GROQ_API_KEY=your_key
 GOOGLE_CLIENT_ID=your_client_id
 GOOGLE_CLIENT_SECRET=your_secret
 
-🚀 ###Run Locally
-Backend
+---
+
+# 🚀 Run Locally
+
+## ⚙️ Backend Setup
+```bash
 cd backend
 npm install
 npm run dev
-Frontend
+🎨 Frontend Setup
 cd frontend
 npm install
 npm run dev
-
-###☁️ Deployment
-Service	Platform
+☁️ Deployment
+<div align="center">
+🧩 Service	🚀 Platform
 Frontend	Vercel
 Backend	Render
 Database	MongoDB Atlas
+</div>
 🔮 Future Features
-💳 Payment integration
-📱 Mobile version
-🧠 AI memory engine
-📊 Advanced analytics
+💳 Payment Integration
+📱 Mobile Application
+🧠 AI Memory Engine
+📊 Advanced Analytics Dashboard
 👨‍💻 Author
-
+<div align="center">
 Raju
-MCA @ Christ University
-Full Stack Developer | AI Enthusiast
 
+🎓 MCA @ Christ University
+💻 Full Stack Developer | 🤖 AI Enthusiast
 
-⭐ Star this repo if you like it!
-
-
+</div>
