@@ -202,7 +202,7 @@ GROQ_API_KEY=your_key
 GOOGLE_CLIENT_ID=your_client_id
 GOOGLE_CLIENT_SECRET=your_secret
 
-🚀 Run Locally
+🚀 ###Run Locally
 Backend
 cd backend
 npm install
@@ -212,7 +212,7 @@ cd frontend
 npm install
 npm run dev
 
-☁️ Deployment
+###☁️ Deployment
 Service	Platform
 Frontend	Vercel
 Backend	Render
