@@ -16,7 +16,7 @@
 
 ---
 
-# ⚡ QUICK SNAPSHOT (Recruiter Scan Layer)
+# ⚡ QUICK SNAPSHOT
 
 | Category      | Details                                       |
 | ------------- | --------------------------------------------- |
