@@ -2,264 +2,244 @@
 
 # 🧠 NEURALIQ
 
-### AI-Native Collaborative Workspace System
+### *AI as a System, not a Feature*
 
-> A full-stack system that integrates persistent AI memory, document intelligence, and real-time multi-user collaboration over a shared context.
+> Persistent AI memory · Document intelligence · Real-time collaboration
+> Built as a **stateful intelligence layer over stateless infrastructure**
 
-[Live App](https://nerual-ai.vercel.app) • [Backend API](https://nerual-ai.onrender.com)
+<br/>
+
+[![Live App](https://img.shields.io/badge/🌐%20Live%20App-Explore-7c3aed?style=for-the-badge)](https://nerual-ai.vercel.app)
+[![Backend](https://img.shields.io/badge/🚀%20API-Live-06b6d4?style=for-the-badge)](https://nerual-ai.onrender.com)
+[![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)](LICENSE)
 
 </div>
 
 ---
 
-# 1. Why This Project Exists
+# ⚡ What This Actually Is
 
-Most AI tools today are **stateless, single-user, and context-fragmented**.
+This is **not**:
 
-* Chat systems → no long-term memory
-* Document tools → no interaction loop
-* Collaboration tools → no intelligence layer
+* another ChatGPT wrapper
+* a CRUD SaaS dashboard
 
-This project explores:
+This is:
 
-> **What if AI becomes a shared system layer instead of a feature?**
-
----
-
-# 2. System Goals
-
-* Maintain **persistent conversational state**
-* Enable **AI over user-owned documents**
-* Support **real-time multi-user interaction over shared context**
-* Enforce **usage constraints (tokens, rate limits, plans)**
-* Keep system **stateless at API layer but stateful at data layer**
+> A **multi-user AI system** where context, state, and collaboration are treated as first-class primitives.
 
 ---
 
-# 3. Core Architecture (Mental Model)
+# 🧠 The Problem Space
 
-This is not just a CRUD app.
+Most tools today are fragmented:
 
-It is a **3-layer system**:
+| Category      | Limitation               |
+| ------------- | ------------------------ |
+| AI Chat       | Stateless, no continuity |
+| Docs          | Static, no interaction   |
+| Collaboration | No intelligence layer    |
+
+---
+
+# 🚀 The Idea
+
+> Combine **memory + documents + collaboration + AI** into one system.
+
+---
+
+# 🧩 System Design Philosophy
+
+### 1. Stateless Infrastructure → Stateful Experience
+
+* API remains stateless (JWT)
+* State reconstructed dynamically:
+
+  * chat history
+  * workspace messages
+  * document context
+
+---
+
+### 2. Context is the Real Database
+
+Instead of vector DB (for now):
+
+* Context is built at runtime
+* Injected into model calls
+* Optimized per endpoint
+
+---
+
+### 3. AI is a Shared Layer
+
+* Not user-specific only
+* Workspace = shared AI context
+* Multiple users → same intelligence state
+
+---
+
+# 🏗 Architecture Overview
 
 ```
-User Interaction Layer (React SPA)
-↓
-State Orchestration Layer (Node + Socket.io)
-↓
-Intelligence + Persistence Layer (Groq + MongoDB)
-```
-
----
-
-# 4. Key Engineering Decisions
-
-## 4.1 Stateless API + Stateful Experience
-
-* APIs are stateless (JWT-based)
-* State is reconstructed using:
-
-  * Chat history
-  * Workspace messages
-  * Document context
-
-👉 Trade-off:
-
-* Simpler scaling
-* Higher compute cost per request
-
----
-
-## 4.2 Context Window Optimization
-
-AI calls are constrained by token limits.
-
-So system injects:
-
-* Personal chat → last 20 messages
-* Workspace → last 10 + documents
-* File Q&A → compressed document chunks
-
-👉 Trade-off:
-
-* Reduced hallucination vs limited long memory
-
----
-
-## 4.3 Real-Time Collaboration via Rooms
-
-Each workspace = Socket.io room
-
-* Events are broadcasted to all members
-* No polling → reduces latency
-* Presence tracking handled in-memory
-
-👉 Trade-off:
-
-* Requires horizontal scaling strategy (future: Redis adapter)
-
----
-
-## 4.4 Document Processing Pipeline
-
-```
-Upload → Parse → Extract Text → Inject into AI Context
-```
-
-Supports:
-
-* PDF (pdf-parse)
-* DOCX (mammoth)
-* TXT
-
-👉 Decision:
-
-* No vector DB (intentional)
-* Uses **prompt injection approach**
-
-Trade-off:
-
-* Faster
-* Less scalable for large documents
-
----
-
-## 4.5 Usage Tracking System
-
-Every request updates:
-
-* tokensUsed
-* messagesCount
-* documentsProcessed
-
-Stored per day (`Usage` collection)
-
-👉 Enables:
-
-* rate enforcement
-* analytics
-* subscription gating
-
----
-
-# 5. System Architecture
-
-```
-Client (React + Vite)
-│
-├── REST (fetch)
-├── WebSocket (Socket.io)
-│
-▼
-Node.js (Express)
-│
-├── Auth Layer (JWT + Passport)
-├── API Layer (Controllers)
-├── Real-time Layer (Socket.io)
-│
-├── MongoDB (State)
-│     ├── Users
-│     ├── Chats
-│     ├── Workspaces
-│     └── Usage
-│
-└── Groq API (LLaMA 3.3)
+User (Browser)
+   │
+   ├── REST (data)
+   ├── WebSocket (real-time)
+   │
+   ▼
+Node.js (Orchestration Layer)
+   │
+   ├── Controllers (logic)
+   ├── Socket.io (events)
+   ├── Middleware (auth, limits)
+   │
+   ▼
+MongoDB (state)
+   │
+   ├── Users
+   ├── Chats
+   ├── Workspaces
+   └── Usage
+   │
+   ▼
+Groq API (LLaMA 3.3)
 ```
 
 ---
 
-# 6. What Makes This System Non-Trivial
+# ⚙️ Core System Flows
 
-### 1. Multi-user AI context synchronization
+## 🧠 AI Chat Flow
 
-* All users share the same AI state in workspace
-
-### 2. Hybrid interaction model
-
-* REST + WebSocket coexist
-
-### 3. Dynamic context injection
-
-* Context differs per endpoint
-
-### 4. Rate limiting at multiple levels
-
-* General / Auth / Chat / Upload
-
-### 5. Soft real-time system
-
-* Not eventually consistent, not strictly real-time
+```
+User Input
+  ↓
+Fetch Chat History
+  ↓
+Inject Context
+  ↓
+Groq API Call
+  ↓
+Store Response
+```
 
 ---
 
-# 7. Constraints & Limitations
+## 📄 Document Intelligence Flow
 
-* No vector database → limits document scale
-* Memory is session-based → not lifelong
-* Socket.io not horizontally scaled yet
-* Token limits restrict long conversations
-
----
-
-# 8. Future Engineering Work
-
-* Redis adapter for Socket scaling
-* Vector DB (FAISS / Pinecone) for retrieval
-* Streaming AI responses
-* Background job queue (BullMQ)
-* Chunked document indexing
+```
+Upload File
+  ↓
+Parse (PDF/DOCX/TXT)
+  ↓
+Extract Text
+  ↓
+Inject into Prompt
+  ↓
+AI Response
+```
 
 ---
 
-# 9. Tech Stack (Only What Matters)
+## 🤝 Workspace Collaboration Flow
+
+```
+User joins workspace
+  ↓
+Socket room subscription
+  ↓
+Real-time message broadcast
+  ↓
+Shared AI context updates
+```
+
+---
+
+# 🔥 What Makes This Non-Trivial
+
+* Multi-user shared AI context
+* Hybrid REST + WebSocket system
+* Dynamic context injection
+* Token-based system constraints
+* Real-time + AI consistency
+
+---
+
+# ⚖️ Engineering Trade-offs
+
+| Decision          | Why            | Trade-off          |
+| ----------------- | -------------- | ------------------ |
+| No vector DB      | Simpler system | Less scalable docs |
+| Context injection | Faster         | Token limits       |
+| Socket.io rooms   | Real-time UX   | Scaling complexity |
+| JWT auth          | Stateless APIs | Recompute context  |
+
+---
+
+# 📊 Observability & Constraints
+
+* Rate limiting (per route)
+* Token usage tracking
+* Daily usage aggregation
+* Plan-based restrictions
+
+---
+
+# 🛠 Tech Stack (Signal Only)
 
 ### Frontend
 
 * React 19 + Vite
 * Tailwind
-* Socket.io client
+* Socket.io
 
 ### Backend
 
 * Node.js + Express
-* MongoDB + Mongoose
+* MongoDB (Mongoose)
 * Socket.io
 * JWT + Passport
 
 ### AI
 
-* Groq API (LLaMA 3.3 70B)
+* Groq (LLaMA 3.3 70B)
 
 ---
 
-# 10. Running the System
+# 📁 Project Structure
 
-```bash
-git clone https://github.com/Raju-CS8/Nerual.ai.git
-cd neuraliq
 ```
-
-### Backend
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
+neuraliq/
+├── backend/
+│   ├── controllers/
+│   ├── models/
+│   ├── routes/
+│   ├── middleware/
+│   └── server.js
+│
+└── frontend/
+    ├── pages/
+    ├── components/
+    ├── hooks/
+    └── api.js
 ```
 
 ---
 
-# 11. Environment Variables
+# 🔒 Security Layer
 
-```env
+* JWT authentication
+* bcrypt hashing
+* CORS restriction
+* file validation
+* rate limiting
+
+---
+
+# 🔑 Environment
+
+```
 PORT=5000
 MONGO_URI=...
 JWT_SECRET=...
@@ -270,23 +250,62 @@ GOOGLE_CLIENT_SECRET=...
 
 ---
 
-# 12. Author
+# 🧪 Run Locally
+
+```
+git clone https://github.com/Raju-CS8/Nerual.ai.git
+cd neuraliq
+```
+
+### Backend
+
+```
+cd backend
+npm install
+npm run dev
+```
+
+### Frontend
+
+```
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+# ☁️ Deployment
+
+| Layer    | Platform      |
+| -------- | ------------- |
+| Frontend | Vercel        |
+| Backend  | Render        |
+| Database | MongoDB Atlas |
+
+---
+
+# 🔮 Where This Can Go
+
+* Vector DB (semantic retrieval)
+* Streaming responses
+* Redis scaling (Socket.io)
+* Background workers
+* Long-term AI memory
+
+---
+
+# 👨‍💻 Author
 
 **Raju**
 MCA @ Christ University
 
-Focused on:
-
-* Full-stack systems
-* AI integration
-* Real-time architectures
+> Focused on building systems — not just features
 
 ---
 
-# 13. Final Note
+<div align="center">
 
-This project is not about UI.
+⭐ If this project made you think differently, consider starring it
 
-It is about exploring:
-
-> How AI behaves when treated as a system primitive, not a feature.
+</div>
