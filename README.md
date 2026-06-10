@@ -1,599 +1,468 @@
-# NEURALIQ - AI-Powered Collaborative Workspace
+<div align="center">
 
-<<<<<<< Updated upstream
 # 🧠 NEURALIQ
+### AI-Powered Real-Time Collaborative Workspace
 
-### ⚡ AI-Powered Collaborative Workspace System
+*The AI that knows your documents, remembers your team, and answers only you.*
 
-> **Persistent AI Memory · Document Intelligence · Real-Time Collaboration**
-
-<br/>
-
-[![Live App](https://img.shields.io/badge/🌐%20Live%20App-Explore-7c3aed?style=for-the-badge)](https://nerual-ai.vercel.app)
-[![Backend](https://img.shields.io/badge/🚀%20Backend%20API-Live-06b6d4?style=for-the-badge)](https://nerual-ai.onrender.com)
+[![Live Demo](https://img.shields.io/badge/🌐%20Live%20Demo-nerual--ai.vercel.app-7c3aed?style=for-the-badge&logoColor=white)](https://nerual-ai.vercel.app)
+[![Backend](https://img.shields.io/badge/🚀%20Backend%20API-Live%20on%20Render-06b6d4?style=for-the-badge)](https://nerual-ai.onrender.com)
+[![GitHub](https://img.shields.io/badge/GitHub-Raju--CS8%2FNerual.ai-181717?style=for-the-badge&logo=github)](https://github.com/Raju-CS8/Nerual.ai)
+[![Tests](https://img.shields.io/badge/Tests-30%2F30%20Passing-10b981?style=for-the-badge)](https://github.com/Raju-CS8/Nerual.ai)
 [![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)](LICENSE)
 
 </div>
 
 ---
 
-# ⚡ QUICK SNAPSHOT
+## 📌 What Is NEURALIQ?
 
-| Category      | Details                                       |
-| ------------- | --------------------------------------------- |
-| 🎯 Problem    | AI tools lack memory, docs, and collaboration |
-| 💡 Solution   | Unified AI + Docs + Teams system              |
-| 🧠 Core Idea  | AI as a **shared state layer**                |
-| ⚙️ Stack      | React · Node · MongoDB · Socket.io · Groq     |
-| 🔥 Complexity | Real-time + AI context + state reconstruction |
+Most AI tools are **stateless, solo, and dumb about your documents.**
+
+NEURALIQ fixes all three — it's a full-stack SaaS platform where teams collaborate in shared AI workspaces, upload documents for intelligent Q&A, and chat with an AI that responds like Jarvis — always knowing who is speaking, what documents are loaded, and what was discussed before.
+
+> Built with React 19, Node.js, MongoDB, Socket.io, Groq LLaMA 3.3-70B, TipTap + Yjs, and RAG-style document chunking.
 
 ---
 
-# 🚀 PROJECT OVERVIEW
-
-**NEURALIQ** is a full-stack AI system that integrates:
-
-* 🤖 Persistent AI Chat
-* 📄 Document Intelligence (PDF/DOCX/TXT)
-* 🤝 Real-Time Multi-user Collaboration
-
-🔗 Live → https://nerual-ai.vercel.app
-🔗 Backend → https://nerual-ai.onrender.com
-
----
-
-# 🧠 CORE IDEA (NOT GENERIC)
-
-### ❌ Problem Space
-
-| System        | Limitation      |
-| ------------- | --------------- |
-| AI Chat       | Stateless       |
-| Docs          | Static          |
-| Collaboration | No intelligence |
-
----
-
-### ✅ Solution
-
-> Build a system where **AI becomes shared, persistent, and contextual**
-
----
-
-# 🔥 WHY THIS IS DIFFERENT
-
-* AI memory per user AND workspace
-* Multi-user shared AI context
-* Document-aware conversations
-* Token-based system constraints
-* Hybrid real-time + REST architecture
-
----
-
-# 🧠 SYSTEM THINKING (IMPORTANT SIGNAL)
-
-```id="ht3s9l"
-AI Context = Chat History + Workspace Messages + Documents
-```
-
-* No single source of truth
-* Context is dynamically reconstructed
-* Every AI call is state-aware
-
----
-
-# 🏗 SYSTEM ARCHITECTURE
-
-```id="d1n0l8"
-BROWSER (React SPA)
-   │
-   ├── REST API (data)
-   ├── WebSocket (real-time)
-   │
-   ▼
-Express.js Backend
-   │
-   ├── Controllers (business logic)
-   ├── Middleware (auth, limits)
-   ├── Socket.io (real-time sync)
-   │
-   ▼
-MongoDB (state layer)
-   │
-   ├── Users
-   ├── Chats
-   ├── Workspaces
-   └── Usage
-   │
-   ▼
-Groq API (LLaMA 3.3)
-```
-
----
-
-# ⚙️ CORE SYSTEM FLOWS
-
-## 🧠 Chat Pipeline
-
-```id="7r29qz"
-User Input → Fetch History → Inject Context → AI → Store → UI
-```
-
-## 📄 Document Pipeline
-
-```id="g1p2md"
-Upload → Parse → Extract → Inject → AI Response
-```
-
-## 🤝 Collaboration Pipeline
-
-```id="4z0u2x"
-Join Room → Broadcast → Sync → Shared AI Context
-```
-
----
-
-# ⚖️ ENGINEERING TRADE-OFFS
-
-| Decision          | Why            | Trade-off                     |
-| ----------------- | -------------- | ----------------------------- |
-| No vector DB      | Simplicity     | Limited scalability           |
-| Context injection | Fast           | Token constraints             |
-| Socket.io rooms   | Real-time UX   | Horizontal scaling complexity |
-| JWT auth          | Stateless APIs | Recompute state               |
-
----
-
-# 🔥 KEY FEATURES (FULL)
-
-| Feature                  | Description                     |
-| ------------------------ | ------------------------------- |
-| 🔐 Authentication        | Email/password + Google OAuth   |
-| 🤖 AI Chat               | Persistent conversation history |
-| 📄 Document Intelligence | Upload + summarize + Q&A        |
-| 🤝 Collaboration         | Real-time workspace chat        |
-| 🏢 Workspaces            | Invite via share code           |
-| 📊 Analytics             | Usage dashboard                 |
-| 💳 Plans                 | Free vs Pro system              |
-| 🖼 Avatar                | Profile upload                  |
-| 📤 Export                | PDF / DOCX                      |
-| 🛡 Rate Limiting         | Multi-layer protection          |
-
----
-
-# 🛠 TECH STACK (FULL DETAIL)
-
-### 🎨 Frontend
-
-* React 19 (Vite)
-* Tailwind CSS
-* Socket.io-client
-* react-markdown
-* recharts
-* jsPDF + docx
-* html2canvas
-* file-saver
-
----
-
-### ⚙️ Backend
-
-* Node.js + Express 5
-* MongoDB + Mongoose
-* Socket.io
-* Passport.js (OAuth)
-* JWT Authentication
-* bcryptjs
-* multer (memory storage)
-* pdf-parse / pdfjs-dist
-* mammoth
-* sharp
-* express-rate-limit
-* express-session
-
----
-
-### 🤖 AI Layer
-
-* Groq API
-* LLaMA 3.3 70B
-* Context-aware prompt injection
-
----
-
-# 📁 PROJECT STRUCTURE
-
-```id="n1h0jq"
-neuraliq/
-├── backend/
-│   ├── config/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── models/
-│   ├── routes/
-│   └── server.js
-│
-└── frontend/
-    ├── pages/
-    ├── components/
-    ├── hooks/
-    └── api.js
-```
-
----
-
-# 🗄 DATABASE DESIGN
-
-### Collections
-
-* Users
-* Chats
-* Workspaces
-* Usage
-
-### Key Concepts
-
-* Chat history drives AI context
-* Workspace stores shared state
-* Usage enforces limits
-
----
-
-# 📡 API SYSTEM
-
-### Auth
-
-* POST `/signup`
-* POST `/login`
-* GET `/me`
-
-### Chat
-
-* POST `/`
-* GET `/history`
-* GET `/stats`
-
-### Files
-
-* POST `/upload`
-* POST `/chat`
-
-### Workspace
-
-* Create / Join / Chat / Manage
-
----
-
-# ⚡ REAL-TIME SYSTEM
-
-* Socket.io rooms per workspace
-* Typing indicators
-* Live message sync
-* Online users tracking
-
----
-
-# 🔒 SECURITY + LIMITING
-
-### Rate Limits
-
-* General → 100 / 15 min
-* Auth → 10 / 15 min
-* Chat → 30 / min
-* Upload → 20 / hour
-
-### Security
-
-* JWT auth
-* bcrypt hashing
-* CORS restriction
-* File validation
-* Token usage limits
-
----
-
-# 🔑 ENVIRONMENT
-
-```env id="d0q1x2"
-PORT=5000
-MONGO_URI=...
-JWT_SECRET=...
-GROQ_API_KEY=...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-```
-
----
-
-# 🧪 RUN LOCALLY
-
-```bash id="5m4j8f"
-git clone https://github.com/Raju-CS8/Nerual.ai.git
-cd neuraliq
-```
-
-### Backend
-
-```bash id="3m7g2k"
-=======
-NEURALIQ is a premium, real-time multiplayer AI collaboration platform. It allows individuals and teams to build isolated workspaces, upload and analyze documents, engage in context-aware conversations with LLMs, and collaborate with team members in real-time through WebSockets.
-
----
-
-## 🎯 Project Objectives & Goals
-
-The core mission of **NEURALIQ** is to bridge the gap between individual AI chat interfaces and team collaboration workspaces by providing:
-1. **Democratized AI Assistance:** Seamless integration of high-performance LLMs (such as LLaMA-3.3-70B via Groq SDK) for all users with smart rate limits and tiering.
-2. **Context-Aware Analytics:** Enabling users to parse complex documents (PDFs, DOCX, TXT) and immediately query, summarize, or extract actionable items from them.
-3. **Real-time Team Synchronization:** Rooms-based workspace environments where teammates see other online members, typing indicators, new messages, and document updates instantaneously without manual refreshes.
-4. **Transparent Resource Auditing:** Visual dashboard charts representing real-time API token consumption, remaining tokens, active days, and document counters to regulate usage.
-5. **Secure and Flexible Authentication:** Seamless transition between local email/password validation and Google OAuth single sign-on (SSO).
+## ⚡ Quick Snapshot
+
+| Category | Details |
+|---|---|
+| 🎯 Problem | AI tools lack memory, document awareness, and real-time collaboration |
+| 💡 Solution | Unified AI + Documents + Team workspace in one platform |
+| 🧠 AI Model | LLaMA 3.3-70B via Groq SDK |
+| ⚙️ Stack | React · Node.js · MongoDB · Socket.io · Yjs · Groq |
+| 🔥 Key Complexity | Real-time sync + RAG document context + identity-aware AI responses |
+| 🧪 Tests | 30/30 Jest tests passing |
+| 🚀 Deployed | Vercel (frontend) + Render (backend) + MongoDB Atlas |
 
 ---
 
 ## 🚀 Core Features
 
-### 1. User Dashboard & Usage Analytics
-* **Token Usage Metrics:** Interactive gauges showing total tokens used versus the free tier limit (100,000 tokens), including calculated percentages and real-time warnings (yellow warning banner at 80% usage, red blocking banner at 100% usage).
-* **Usage Overview Chart:** A custom SVG area and line graph displaying daily token usage over the last 7 days (populated dynamically from the database).
-* **Document Progress Circle:** Animated radial completion widget highlighting the total count of documents processed.
-* **Profile Summary:** Quick details on user status (Free vs. Pro plan), remaining token counts, active usage days, and a redirect trigger to upgrade plans.
+### 1. 🤖 Jarvis-Style AI — Knows Who Is Speaking
+The AI always responds to **whoever is currently sending the message**, not the last person who spoke. Even in shared workspaces with chat history from multiple users, the AI identifies the active user via JWT and addresses only them — like a real third person in the room.
 
-### 2. General AI Chat Engine
-* **Context Preservation:** Chat memory utilizing previous message blocks (up to 20 messages for Free, and extended contexts for Pro) to preserve user-AI discussion history.
-* **Chat Management:** Dynamic sidebar to create a "New Chat", rename existing chats in-place, delete historical chats, and view relative timestamps ("5m ago", "2d ago").
-* **Rich Text Rendering:** Integration of markdown formatting supporting headers, bulleted/numbered lists, bold styling, and inline/block code syntax highlighting.
-* **Document Exports:** Options to export the entire chat transcript directly as a professionally formatted **PDF** (using `jspdf` layout configurations) or **Word Document (.docx)** (using `docx` generation styles).
+### 2. 📄 RAG-Based Document Intelligence
+Documents are no longer limited to 8,000 characters. Uploaded files are split into overlapping chunks with a keyword-scoring retrieval engine that fetches only the most relevant sections per query — enabling accurate answers across 100+ page documents without a vector database.
 
-### 3. File Summarization & Q&A Panel
-* **Drag-and-Drop Uploader:** Intuitive dashboard drop zone accepting PDF, DOCX, and TXT files up to 50MB.
-* **Text Extraction Engine:** Server-side parsing of raw file buffers to extract text (processing up to 8,000 characters).
-* **Automated Document Summaries:** Generates structured document overviews on upload containing an *Executive Summary*, *Key Points*, and *Action Items*.
-* **Document Chat:** Interactive interface to ask questions specific to the uploaded file context, extract bullet points, or generate flashcards (Q&A format).
+```
+Upload PDF → Extract Full Text → Chunk with Overlap → Score by Query Keywords → Inject Top Chunks → Groq LLM
+```
 
-### 4. Collaborative Workspaces
-* **Multi-User Rooms:** Isolated workspaces with a unique share code (e.g., `NEURO-XXXXX`) allowing coworkers to join and gain access.
-* **Real-time Socket Notifications:** Instant synchronization of user activity (system messages for user joined, user left, document added), chat history updates, and messages.
-* **Presence Indicators:** Live count and avatar icons of currently active users in the workspace.
-* **Typing Indicators:** Real-time feedback showing when other workspace collaborators are actively writing.
-* **Workspace Chat & QA:** Workspace-wide messaging thread with the ability to trigger AI prompts on uploaded workspace documents.
+### 3. 🔴 Real-Time Collaborative Workspaces
+Teams join isolated rooms via a share code (`NEURO-XXXXX`). Everything syncs instantly via Socket.io — messages, document uploads, typing indicators, presence avatars, and AI responses.
 
-### 5. Team Management & Activity Feed
-* **Teammate Directory:** Aggregated grid of all collaborators across all workspaces owned by or shared with the user.
-* **Teammate Role & Status Controllers:** Ability to assign custom roles (*Admin, Developer, Designer, Analyst, Manager*) and update status indicators (*Online, Busy, Offline*).
-* **Collaborator Eviction:** Allows workspace owners to delete/remove collaborators from workspaces they own.
-* **Workspace Task Graph:** Bar graph mapping the distribution of loaded documents across different workspaces.
-* **Live Activity Feed:** A scrolling real-time log capturing recent actions, detailing who uploaded what document, under which workspace, and when.
+### 4. ✏️ Collaborative Rich Text Editor
+A TipTap + Yjs CRDT-powered editor inside every workspace. Multiple users can write notes simultaneously — changes sync in real-time across all connected clients via a custom Yjs WebSocket server.
+
+### 5. 🔐 Role-Based Access Control (Backend Enforced)
+Roles are not cosmetic — they are enforced on every backend route:
+
+| Role | Permissions |
+|---|---|
+| Owner | Full access — delete workspace, rename, manage all |
+| Admin | Delete documents, remove collaborators |
+| Developer / Designer / Analyst / Manager | Chat, upload documents |
+| Viewer | Read-only — chat only |
+
+### 6. 📊 Usage Analytics Dashboard
+Live token consumption tracking with a 7-day SVG area chart, document counter, plan status (Free/Pro), and automatic warnings at 80% and 100% token usage.
+
+### 7. 🔑 Dual Authentication
+Email/password with bcrypt hashing + Google OAuth 2.0 SSO via Passport.js. JWT tokens are verified on every protected route with automatic expiry handling on the frontend.
+
+### 8. 👥 Team Management Panel
+Aggregated teammate directory across all workspaces. Owners can assign roles, update status (Online/Busy/Offline), and remove collaborators. All changes persist to MongoDB.
+
+---
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    BROWSER (React 19 SPA)                   │
+│                                                             │
+│  Pages: Dashboard · Chat · Files · Workspace · Team        │
+│  Real-time: Socket.io Client                               │
+│  Collab Editor: TipTap + Yjs WebsocketProvider            │
+└──────────────────┬──────────────────┬───────────────────────┘
+                   │ REST API          │ WebSocket
+                   ▼                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  EXPRESS.JS BACKEND (Node.js)               │
+│                                                             │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ Controllers │  │  Middleware  │  │   Socket.io      │  │
+│  │ auth        │  │ JWT protect  │  │   Workspace rooms│  │
+│  │ chat        │  │ roleMiddle   │  │   Typing events  │  │
+│  │ workspace   │  │ rateLimiter  │  │   Presence sync  │  │
+│  │ files       │  │ CORS         │  └──────────────────┘  │
+│  └─────────────┘  └──────────────┘                         │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Yjs WebSocket Server (/yjs)            │   │
+│  │         CRDT sync for collaborative editor         │   │
+│  └─────────────────────────────────────────────────────┘   │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+         ┌─────────┴──────────┐
+         ▼                    ▼
+┌─────────────────┐  ┌────────────────────┐
+│  MongoDB Atlas  │  │    Groq API        │
+│                 │  │  LLaMA 3.3-70B     │
+│  Users          │  │                    │
+│  Chats          │  │  RAG context       │
+│  Workspaces     │  │  injected per      │
+│  Usage logs     │  │  query             │
+└─────────────────┘  └────────────────────┘
+```
+
+---
+
+## 🔄 Key System Flows
+
+### Authentication Flow
+```
+Email/Password ──► bcrypt verify ──► JWT sign ──► Return token
+Google OAuth   ──► Passport.js  ──► Find/Create user ──► JWT ──► Redirect with token
+```
+
+### RAG Document Flow
+```
+File Upload
+    │
+    ▼
+Extract full text (pdf-parse / mammoth)
+    │
+    ▼
+chunkText() — split into 1500-char chunks with 200-char overlap
+    │
+    ▼
+Store chunks[] in MongoDB alongside extractedText
+    │
+    ▼ (on each chat message)
+retrieveRelevantChunks() — keyword score each chunk against query
+    │
+    ▼
+Top 3 chunks per document injected into Groq system prompt
+    │
+    ▼
+LLaMA 3.3-70B answers with full document context
+```
+
+### Real-Time Workspace Flow
+```
+User A joins ──► socket.join(workspaceId) ──► broadcast users_online
+User A types ──► emit('typing') ──► broadcast user_typing to room
+User A sends ──► POST /workspace/chat ──► Groq API ──► save to DB
+                      │
+                      ▼
+              emit('ai_response') ──► broadcast to all room members
+```
+
+### Collaborative Editor Flow
+```
+User opens Notes tab
+    │
+    ▼
+new Y.Doc() + WebsocketProvider connects to /yjs/workspace-{id}
+    │
+    ▼
+TipTap editor binds to Y.Doc (CRDT)
+    │
+    ▼
+Every keystroke syncs to all connected clients via Yjs protocol
+    │
+    ▼
+Colored cursors show each user's position in real-time
+```
 
 ---
 
 ## 🛠️ Technology Stack
 
-### Frontend Architecture
-* **Core Framework:** React 19 (Component-based architecture utilizing React hooks like `useState`, `useEffect`, `useCallback`, and `useRef`).
-* **Build System:** Vite (Fast dev server and optimized production packaging).
-* **Styling & Theme:** Tailwind CSS v3 (Responsive glassmorphism UI, dark mode palette, custom keyframe micro-animations like pulse-glows and page transitions).
-* **WebSockets Client:** `socket.io-client` (Bi-directional workspace room connection).
-* **Data Visualization:** Custom SVG line/area graphics and radial circle loaders for dependency-free, high-performance rendering.
-* **File Generators:** 
-  * `jspdf` for compiling transcripts into multi-page PDF documents.
-  * `docx` & `file-saver` for packing and downloading Microsoft Word files.
-* **Markdown Parser:** `react-markdown` for structured, code-highlighted AI text output.
+### Frontend
+| Technology | Purpose |
+|---|---|
+| React 19 + Vite | Core framework + fast builds |
+| Tailwind CSS v3 | Glassmorphism dark UI + animations |
+| Socket.io Client | Real-time workspace sync |
+| TipTap v2 | Rich text collaborative editor |
+| Yjs + y-websocket | CRDT real-time sync protocol |
+| react-markdown | Markdown rendering for AI responses |
+| jspdf + docx | Chat export to PDF and Word |
 
-### Backend Infrastructure
-* **Runtime & Web Server:** Node.js with Express (REST API routing, validation middleware, and global error handling).
-* **Database & ORM:** MongoDB with Mongoose (Document-based schema models mapping Users, Workspaces, Chats, and Daily Usage Logs).
-* **AI Integration:** `groq-sdk` connecting to the `llama-3.3-70b-versatile` LLM model.
-* **WebSockets Server:** `socket.io` running alongside the HTTP server to handle room-based connection logic and presence management.
-* **Authentication & SSO:** Passport.js with Google OAuth 2.0 (`passport-google-oauth20`) and custom JWT (`jsonwebtoken`) route verification.
-* **Security & Rate Limiting:**
-  * `bcryptjs` for secure password hashing.
-  * `express-rate-limit` namespace limiting (auth signups/logins capped at 10 requests per 15 min; chats at 30 requests per min; file uploads at 20 requests per hour).
-  * CORS origin filters checking against verified local development and production URLs.
-* **File Upload & Parsing:**
-  * `multer` for memory buffer file handling.
-  * `pdf-parse` / `pdfjs-dist` (legacy build) for PDF parsing.
-  * `mammoth` for DOCX raw text extraction.
-  * `sharp` for asset scaling.
+### Backend
+| Technology | Purpose |
+|---|---|
+| Node.js + Express 5 | REST API server |
+| MongoDB + Mongoose | Document database + schemas |
+| Socket.io | WebSocket room management |
+| Groq SDK (LLaMA 3.3-70B) | AI inference engine |
+| Passport.js + Google OAuth | SSO authentication |
+| JWT (jsonwebtoken) | Stateless route protection |
+| bcryptjs | Password hashing |
+| multer | Memory-buffer file uploads |
+| pdf-parse + mammoth | PDF and DOCX text extraction |
+| express-rate-limit | Route-level rate limiting |
+| Jest + Supertest | Backend testing (30/30 passing) |
 
 ---
 
-## 🔄 Request & Process Flow Architecture
+## 🧪 Test Coverage
 
-### 1. Authentication & Session Flow
-```
-[Client App]                              [Backend Server]                         [Google OAuth / Database]
-     |                                           |                                             |
-     |---- 1. Submit email/password ------------>|                                             |
-     |                                           |---- 2. Query Email & Hash Verification ---->|
-     |                                           |<--- 3. Return user profile -----------------|
-     |                                           |                                             |
-     |                                           |---- 4. Generate & Sign JWT (JWT_SECRET) --->|
-     |<--- 5. Return JSON (User + Token) --------|                                             |
-     |                                           |                                             |
-     |===== GOOGLE OAUTH FLOW ===================|                                             |
-     |                                           |                                             |
-     |---- 6. GET /auth/google ----------------->|---- 7. Redirect to Google Consent --------->|
-     |                                           |                                             |
-     |                                           |<--- 8. Callback with Profile Data ----------|
-     |                                           |---- 9. Create/Find User & Generate JWT ---->|
-     |<--- 10. Redirect with Token in URL -------|                                             |
-     |     (dashboard?token=xyz)                 |                                             |
+```bash
+npm test
 ```
 
-### 2. File Upload & AI Summarization Flow
 ```
-[Client App]                                [Backend API]                          [Groq LLaMA Service]
-     |                                            |                                         |
-     |---- 1. POST /api/files/upload (Form) ----->|                                         |
-     |        (Includes file in Multer buffer)    |                                         |
-     |                                            |---- 2. Parse file extensions ---------->|
-     |                                            |     (pdfjs / mammoth text extractor)    |
-     |                                            |                                         |
-     |                                            |---- 3. Slice to first 8,000 chars ----->|
-     |                                            |                                         |
-     |                                            |---- 4. Send summarize prompt to Groq -->|
-     |                                            |<--- 5. Return markdown summary ---------|
-     |                                            |                                         |
-     |                                            |---- 6. Increment DB processed counter ->|
-     |<--- 7. Return extracted text + summary ----|                                         |
-```
+Test Suites: 4 passed, 4 total
+Tests:       30 passed, 30 total
 
-### 3. Real-time Workspace Socket Flow
-```
-[Client User A]                        [Socket.io Gateway]                       [Client User B]
-       |                                       |                                        |
-       |--- 1. emit('join_workspace', ID) ---->|                                        |
-       |                                       |--- 2. Join room context (socket.join)  |
-       |                                       |--- 3. emit('user_joined', User A) ---->|
-       |                                       |<-- 4. emit('users_online', updated) ---|
-       |<-- 5. emit('users_online', updated) --|                                        |
-       |                                       |                                        |
-       |--- 6. emit('typing') ---------------->|                                        |
-       |                                       |--- 7. emit('user_typing', User A) ---->|
-       |                                       |                                        |
-       |--- 8. emit('workspace_message') ----->|                                        |
-       |                                       |--- 9. emit('new_message', User A) ---->|
-       |                                       |                                        |
-       |=== AI ANSWERING SYNC =================|                                        |
-       |                                       |                                        |
-       |--- 10. POST /api/workspace/chat ----->| (Hits Groq API, saves message in DB)   |
-       |<-- 11. Returns AI Reply json ---------|                                        |
-       |--- 12. emit('ai_response', Reply) --->|                                        |
-       |                                       |--- 13. emit('new_message', AI Reply) ->|
+├── auth.test.js          — Signup, login, duplicate email, missing fields
+├── workspace.test.js     — Create, get, rename, delete + auth guards
+├── chunking.test.js      — RAG chunk splitting and keyword retrieval (unit)
+└── roleMiddleware.test.js — Owner / Admin / Viewer / Stranger enforcement
 ```
 
 ---
 
-## 📈 Development Status
+## 📁 Project Structure
 
-### ✅ Completed
-1. **Security & Session Layer:**
-   * Double-tier auth validation (Standard Login/Signup + Google OAuth redirect loop).
-   * Request throttling via customizable rate limiters mapped to route categories.
-   * Session verification via custom JWT header middlewares.
-   * Profile photo updating (base64 buffer conversion) and profile name edits.
-2. **Global AI Chat Engine:**
-   * Full chat panel featuring auto-scroll, markdown parsing, and conversation histories.
-   * Multi-page PDF layout generation via `jspdf` and Word Document packet delivery via `docx`.
-   * Dynamic sidebar managing active chat deletions and updates.
-3. **Analytics Dashboard:**
-   * Plan warning/blocking indicators monitoring the 100,000 free token boundary.
-   * Custom line/area charting showing token activity logs dynamically fetched from user usage schemas.
-4. **Document Processing Engine:**
-   * Backend parser extracting raw data from `.pdf`, `.docx`, and `.txt` files.
-   * Summarization agent that formats executive summaries and action items.
-   * Isolated Q&A chat specific to the uploaded file text buffer.
-5. **Real-time Infrastructure:**
-   * WebSocket room binding based on workspace IDs.
-   * Collaborative indicators (online members indicator, real-time typing listeners, workspace update synchronization).
-6. **Team Panel:**
-   * Teammate listing based on workspace collaborators.
-   * Role management options, live upload feed parsing, and document distribution charts.
-
-### 🚧 In Building Stage
-1. **Global Socket State Syncing:**
-   * Refining Socket connections inside page navigation (cleaning up and re-instantiating socket connections cleanly during workspace switches).
-2. **UI Micro-interactions:**
-   * Polishing CSS drag-over styles and workspace sidebar renaming indicators.
-
-### 📋 To Be Completed (Next Steps & Roadmap)
-1. **CRITICAL BUG FIX - Workspace AI Context Ingestion:**
-   * *Issue:* The workspace controller (`workspaceController.js` inside `chatWithWorkspace`) processes and compiles the documents loaded into the workspace into `combinedContext`, but does not inject this context into the system prompt messages sent to the Groq LLM API.
-   * *Resolution:* Modify the system prompt initialization to append the document context text when query calls are dispatched.
-2. **Integrated Payment Gateway:**
-   * Currently, upgrading to the Pro plan triggers a mock endpoint (`/api/subscription/upgrade`) which directly overrides the user plan property in the database. Integrate Stripe or Razorpay to handle secure transactions and webhooks.
-3. **Document Chunking & Vector Databases (RAG):**
-   * Currently, document uploads only slice the first 8,000 characters of a file. Implement a Retrieval-Augmented Generation (RAG) system using vector embeddings (e.g., Pinecone, ChromaDB, or pgvector) and text chunking to allow querying of files larger than 100+ pages.
-4. **Collaborative Text Editing:**
-   * Integrate a collaborative rich-text editor (e.g., Quill or TipTap powered by Yjs) into workspaces so teammates can write document summaries and drafts together in real-time.
-5. **Role-Based Permissions Enforcement:**
-   * Currently, collaborator roles (Admin, Developer, Designer, Analyst, Manager) are cosmetic fields stored in the UI. Enforce permissions on the backend to restrict file deletion, workspace deletions, and invites to Workspace Admins/Owners.
+```
+neuraliq/
+├── backend/
+│   ├── __tests__/
+│   │   ├── auth.test.js
+│   │   ├── workspace.test.js
+│   │   ├── chunking.test.js
+│   │   └── roleMiddleware.test.js
+│   ├── config/
+│   │   ├── db.js
+│   │   └── passport.js
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── chatController.js
+│   │   ├── fileController.js
+│   │   └── workspaceController.js
+│   ├── middleware/
+│   │   ├── authMiddleware.js
+│   │   └── roleMiddleware.js
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Chat.js
+│   │   ├── Workspace.js
+│   │   └── Usage.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── chatRoutes.js
+│   │   ├── fileRoutes.js
+│   │   ├── workspaceRoutes.js
+│   │   └── googleAuth.js
+│   └── server.js
+│
+└── frontend/
+    └── src/
+        ├── components/
+        │   ├── Sidebar.jsx
+        │   └── CollaborativeEditor.jsx
+        ├── hooks/
+        │   └── useSocket.js
+        ├── pages/
+        │   ├── Dashboard.jsx
+        │   ├── Chat.jsx
+        │   ├── Files.jsx
+        │   ├── Workspace.jsx
+        │   ├── Team.jsx
+        │   ├── Pricing.jsx
+        │   └── Settings.jsx
+        ├── App.jsx
+        └── api.js
+```
 
 ---
 
-## ⚙️ Getting Started
+## 🗄️ Database Design
 
-### Environment Variable Setup
+### Collections & Key Fields
 
-Create a `.env` file inside the `backend` directory:
+```
+Users
+├── name, email, password (bcrypt)
+├── googleId, avatar (base64)
+├── plan (free | pro)
+├── tokensUsed, documentsProcessed
+└── timestamps
+
+Workspaces
+├── userId (owner ref)
+├── name, shareCode (NEURO-XXXXX)
+├── collaborators[]
+│   ├── userId, name, email
+│   ├── role (Admin|Developer|Designer|Analyst|Manager|Viewer)
+│   └── status (Online|Offline|Busy)
+├── documents[]
+│   ├── fileName, extractedText
+│   ├── chunks[] (RAG)
+│   └── uploadedBy, uploadedAt
+└── messages[]
+    ├── role (user|assistant)
+    ├── content, userName
+    └── createdAt
+
+Chats
+├── userId, title
+└── messages[] (role, content)
+
+Usage
+├── userId, date
+├── tokensUsed, messagesCount
+└── documentsCount
+```
+
+---
+
+## 📡 API Reference
+
+### Auth Routes
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/signup` | Register new user |
+| POST | `/api/auth/login` | Login with email/password |
+| GET | `/api/auth/me` | Get current user |
+| POST | `/api/auth/avatar` | Upload profile picture |
+| PATCH | `/api/auth/name` | Update display name |
+| GET | `/auth/google` | Google OAuth redirect |
+
+### Chat Routes
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/chat` | Send message to AI |
+| GET | `/api/chat/history` | Get all chats |
+| GET | `/api/chat/:id` | Get single chat |
+| GET | `/api/chat/stats` | Get 7-day usage stats |
+| PATCH | `/api/chat/:id/rename` | Rename chat |
+| DELETE | `/api/chat/:id` | Delete chat |
+
+### File Routes
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/files/upload` | Upload + summarize document |
+| POST | `/api/files/chat` | Chat about uploaded document |
+
+### Workspace Routes
+| Method | Endpoint | Auth Required |
+|---|---|---|
+| GET | `/api/workspace` | Any member |
+| POST | `/api/workspace` | Authenticated |
+| POST | `/api/workspace/join` | Authenticated |
+| POST | `/api/workspace/:id/chat` | Member |
+| POST | `/api/workspace/:id/documents` | Member |
+| PATCH | `/api/workspace/:id/rename` | Owner only |
+| DELETE | `/api/workspace/:id` | Owner only |
+| DELETE | `/api/workspace/:id/documents/:index` | Admin or Owner |
+| DELETE | `/api/workspace/:id/collaborator/:index` | Admin or Owner |
+| PATCH | `/api/workspace/:id/collaborator/:collabId/role` | Admin or Owner |
+| DELETE | `/api/workspace/:id/leave` | Member |
+| DELETE | `/api/workspace/:id/messages` | Member |
+
+---
+
+## ☁️ Deployment
+
+| Layer | Platform | URL |
+|---|---|---|
+| Frontend | Vercel | https://nerual-ai.vercel.app |
+| Backend | Render | https://nerual-ai.onrender.com |
+| Database | MongoDB Atlas | Managed cluster |
+| AI | Groq Cloud | LLaMA 3.3-70B |
+
+---
+
+## ⚙️ Local Setup
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/Raju-CS8/Nerual.ai.git
+cd neuraliq
+```
+
+### 2. Backend Setup
+```bash
+cd backend
+npm install
+```
+
+Create `backend/.env`:
 ```env
 PORT=5000
-MONGO_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/neuraliq
-JWT_SECRET=your_jwt_secret_key_here
+MONGO_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/neuraliq
+JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=7d
-GROQ_API_KEY=gsk_your_groq_api_key_here
-GOOGLE_CLIENT_ID=your_google_client_id_here
-GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+GROQ_API_KEY=gsk_your_groq_key
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_CALLBACK_URL=http://localhost:5000/auth/google/callback
 FRONTEND_URL=http://localhost:5173
 ```
 
-Create a `.env` file inside the `frontend` directory:
+```bash
+npm run dev
+```
+
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+```
+
+Create `frontend/.env`:
 ```env
 VITE_API_URL=http://localhost:5000/api
 VITE_SOCKET_URL=http://localhost:5000
 ```
 
-### Installation & Execution
-
-#### 1. Start the Backend Server
 ```bash
->>>>>>> Stashed changes
+npm run dev
+```
+
+### 4. Run Tests
+```bash
 cd backend
-npm install
-npm run dev
+npm test
 ```
 
-<<<<<<< Updated upstream
-### Frontend
+---
 
-```bash id="9a2f6h"
-=======
-#### 2. Start the Frontend Server
-```bash
->>>>>>> Stashed changes
-cd frontend
-npm install
-npm run dev
-```
-<<<<<<< Updated upstream
+## ⚖️ Engineering Decisions
+
+| Decision | Reason | Trade-off |
+|---|---|---|
+| Keyword-based RAG (no vector DB) | Zero infra cost, fast setup | Less semantic accuracy vs embeddings |
+| Yjs CRDT over OT | Conflict-free merging, battle-tested | Slightly higher memory per session |
+| Socket.io rooms over WebRTC | Simpler server-side control | Server as relay (not P2P) |
+| JWT over sessions | Stateless, scales horizontally | Token revocation requires blacklist |
+| Groq over OpenAI | 10x faster inference, free tier | Fewer model options |
+| MongoDB over PostgreSQL | Flexible document schema | Less relational integrity |
 
 ---
 
-# ☁️ DEPLOYMENT
-
-| Layer    | Platform      |
-| -------- | ------------- |
-| Frontend | Vercel        |
-| Backend  | Render        |
-| Database | MongoDB Atlas |
-
----
-
-# 🔮 FUTURE WORK
-
-* Vector DB integration
-* Streaming responses
-* Redis scaling
-* Background job queues
-* Long-term memory
-
----
-
-# 👨‍💻 AUTHOR
+## 👨‍💻 Author
 
 **Raju**
-MCA @ Christ University
+MCA Student · CHRIST (Deemed to be University), Bengaluru
+Specializing in Full-Stack Development & AI/ML Systems
 
-> Focused on building systems with real-world constraints
+[![GitHub](https://img.shields.io/badge/GitHub-Raju--CS8-181717?style=flat&logo=github)](https://github.com/Raju-CS8)
 
 ---
 
 <div align="center">
 
-⭐ Star this repo if you found it valuable
+**⭐ Star this repo if you found it valuable**
+
+*Built with purpose — not just to learn, but to ship.*
 
 </div>
-=======
->>>>>>> Stashed changes
