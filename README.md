@@ -3,7 +3,7 @@
 # 🧠 NEURALIQ
 ### AI-Powered Real-Time Collaborative Workspace
 
-*The AI that knows your documents, remembers your team, and answers only you.*
+*Your team thinks here..*
 
 [![Live Demo](https://img.shields.io/badge/🌐%20Live%20Demo-nerual--ai.vercel.app-7c3aed?style=for-the-badge&logoColor=white)](https://nerual-ai.vercel.app)
 [![Backend](https://img.shields.io/badge/🚀%20Backend%20API-Live%20on%20Render-06b6d4?style=for-the-badge)](https://nerual-ai.onrender.com)
