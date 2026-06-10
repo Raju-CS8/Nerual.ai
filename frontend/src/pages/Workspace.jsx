@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import Sidebar from '../components/Sidebar'
+import CollaborativeEditor from '../components/CollaborativeEditor'
 import { useSocket } from '../hooks/useSocket'
 import {
   getWorkspacesAPI, createWorkspaceAPI, addDocumentToWorkspaceAPI,
   chatWithWorkspaceAPI, deleteDocumentAPI, deleteWorkspaceAPI,
-  joinWorkspaceAPI, renameWorkspaceAPI
+  joinWorkspaceAPI, renameWorkspaceAPI, leaveWorkspaceAPI, clearChatHistoryAPI
 } from '../api'
 
 const MarkdownMessage = ({ content }) => (
@@ -28,6 +29,10 @@ const MarkdownMessage = ({ content }) => (
   </div>
 )
 
+// ── Tab IDs ───────────────────────────────────────────────────
+const TAB_CHAT = 'chat'
+const TAB_EDITOR = 'editor'
+
 export default function Workspace({ activePage, setActivePage, user, onLogout }) {
   const [workspaces, setWorkspaces] = useState([])
   const [activeWorkspace, setActiveWorkspace] = useState(null)
@@ -45,6 +50,9 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
   const [joinError, setJoinError] = useState('')
   const [renamingId, setRenamingId] = useState(null)
   const [renameValue, setRenameValue] = useState('')
+  // ✅ NEW: active tab — chat or editor
+  const [activeTab, setActiveTab] = useState(TAB_CHAT)
+
   const fileInputRef = useRef(null)
   const bottomRef = useRef(null)
   const typingTimeout = useRef(null)
@@ -53,6 +61,16 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
   const userId = user?._id || user?.id
 
   useEffect(() => { activeWorkspaceRef.current = activeWorkspace }, [activeWorkspace])
+
+  // ── Derive current user's role in active workspace ────────
+  const isOwner = activeWorkspace?.userId?.toString() === userId
+  const isWsOwner = (ws) => ws.userId?.toString() === userId
+
+  const currentUserRole = isOwner
+    ? 'Owner'
+    : activeWorkspace?.collaborators?.find(
+        c => c.userId?.toString() === userId
+      )?.role || 'Viewer'
 
   const socketCallbacks = {
     onNewMessage: ({ message, userName, role }) => {
@@ -111,6 +129,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
         setMessages([])
         setNewWorkspaceName('')
         setCreating(false)
+        setActiveTab(TAB_CHAT)
       }
     } catch { alert('Could not create workspace') }
   }
@@ -136,6 +155,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
         }
         setShareCode('')
         setJoining(false)
+        setActiveTab(TAB_CHAT)
       } else { setJoinError(data.error || 'Invalid share code') }
     } catch { setJoinError('Could not join workspace') }
   }
@@ -143,6 +163,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
   const selectWorkspace = (ws) => {
     setActiveWorkspace(ws)
     setOnlineUsers([])
+    setActiveTab(TAB_CHAT)
     const savedMessages = (ws.messages || []).map(m => ({
       role: m.role, content: m.content, userName: m.userName
     }))
@@ -167,7 +188,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
         setWorkspaces(prev => prev.map(w => w._id === data.workspace._id ? data.workspace : w))
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: `✅ "${file.name}" added! You now have ${data.workspace.documents.length} document(s).`,
+          content: `✅ "${file.name}" added! You now have ${data.workspace.documents.length} document(s). ${data.message || ''}`,
           userName: 'NEURALIQ AI'
         }])
         emitMessage('document_added', { workspaceId: activeWorkspace._id, fileName: file.name, userName: user?.name })
@@ -178,11 +199,18 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
 
   const deleteDocument = async (docIndex) => {
     if (!activeWorkspace) return
+    // Show error if not admin/owner — backend will also block but give UI feedback
+    if (currentUserRole === 'Viewer') {
+      alert('Only Admins or the workspace Owner can delete documents.')
+      return
+    }
     try {
       const data = await deleteDocumentAPI(activeWorkspace._id, docIndex)
       if (data.success) {
         setActiveWorkspace(data.workspace)
         setWorkspaces(prev => prev.map(w => w._id === data.workspace._id ? data.workspace : w))
+      } else {
+        alert(data.error || 'Could not delete document')
       }
     } catch { alert('Could not delete document') }
   }
@@ -190,10 +218,29 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
   const handleDeleteWorkspace = async (workspaceId) => {
     if (!window.confirm('Delete this workspace permanently?')) return
     try {
-      await deleteWorkspaceAPI(workspaceId)
+      const data = await deleteWorkspaceAPI(workspaceId)
+      if (data.error) { alert(data.error); return }
       setWorkspaces(prev => prev.filter(w => w._id !== workspaceId))
       if (activeWorkspace?._id === workspaceId) { setActiveWorkspace(null); setMessages([]) }
     } catch { alert('Could not delete workspace') }
+  }
+
+  const handleLeaveWorkspace = async (workspaceId) => {
+    if (!window.confirm('Leave this workspace?')) return
+    try {
+      await leaveWorkspaceAPI(workspaceId)
+      setWorkspaces(prev => prev.filter(w => w._id !== workspaceId))
+      setActiveWorkspace(null)
+      setMessages([])
+    } catch { alert('Could not leave workspace') }
+  }
+
+  const handleClearHistory = async () => {
+    if (!window.confirm('Clear all chat history?')) return
+    try {
+      await clearChatHistoryAPI(activeWorkspace._id)
+      setMessages([{ role: 'assistant', content: 'Chat history cleared!', userName: 'NEURALIQ AI' }])
+    } catch { alert('Could not clear history') }
   }
 
   const handleRenameWorkspace = async (id) => {
@@ -203,6 +250,8 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
       if (data.success) {
         setWorkspaces(prev => prev.map(w => w._id === id ? { ...w, name: renameValue } : w))
         if (activeWorkspace?._id === id) setActiveWorkspace(prev => ({ ...prev, name: renameValue }))
+      } else {
+        alert(data.error || 'Could not rename workspace')
       }
     } catch { console.log('Could not rename') }
     setRenamingId(null)
@@ -246,9 +295,6 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
 
   const copyShareCode = (code) => { navigator.clipboard.writeText(code); alert(`Share code copied: ${code}`) }
 
-  const isOwner = activeWorkspace?.userId?.toString() === userId
-  const isWsOwner = (ws) => ws.userId?.toString() === userId
-
   const quickPrompts = ['Summarize all documents', 'Compare the documents', 'What are the key differences?', 'Create flashcards from all docs', 'List the main topics covered', 'What are the action items?']
 
   return (
@@ -257,6 +303,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
 
       <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
+      {/* ── Workspace sidebar ─────────────────────────────── */}
       <div className="w-64 flex flex-col py-4 px-3 gap-3 flex-shrink-0"
         style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
 
@@ -342,7 +389,10 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
         </div>
       </div>
 
+      {/* ── Main area ─────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
+
+        {/* Header */}
         <div className="px-6 py-4 flex-shrink-0 flex items-center justify-between"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div>
@@ -351,7 +401,16 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
               <span className="font-light"> Workspace</span>
             </h1>
             <p className="text-gray-500 text-sm mt-1">
-              {activeWorkspace ? `📁 ${activeWorkspace.name}` : 'Select or create a workspace'}
+              {activeWorkspace
+                ? <>📁 {activeWorkspace.name}
+                  {currentUserRole !== 'Owner' && (
+                    <span className="ml-2 text-xs px-2 py-0.5 rounded-full"
+                      style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.3)' }}>
+                      {currentUserRole}
+                    </span>
+                  )}
+                </>
+                : 'Select or create a workspace'}
             </p>
           </div>
 
@@ -393,6 +452,22 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
               </div>
             )}
 
+            {activeWorkspace && !isOwner && (
+              <button onClick={() => handleLeaveWorkspace(activeWorkspace._id)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>
+                🚪 Leave
+              </button>
+            )}
+
+            {activeWorkspace && (
+              <button onClick={handleClearHistory}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
+                🗑️ Clear Chat
+              </button>
+            )}
+
             {activeWorkspace && (
               <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-all hover:opacity-80"
@@ -421,6 +496,8 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
           </div>
         ) : (
           <div className="flex-1 flex overflow-hidden">
+
+            {/* Documents + Collaborators sidebar */}
             <div className="w-52 flex flex-col py-4 px-3 gap-2 flex-shrink-0"
               style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
               <p className="text-xs text-gray-500 uppercase tracking-widest px-1">Documents</p>
@@ -437,7 +514,7 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                     <div className="flex items-center gap-2">
                       <span className="text-sm flex-shrink-0">📄</span>
                       <p className="text-white text-xs truncate flex-1">{doc.fileName}</p>
-                      {isOwner && (
+                      {(isOwner || currentUserRole === 'Admin') && (
                         <button onClick={() => deleteDocument(i)}
                           className="text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 text-xs flex-shrink-0">✕</button>
                       )}
@@ -465,108 +542,149 @@ export default function Workspace({ activePage, setActivePage, user, onLogout })
                         style={{ background: 'linear-gradient(135deg, #06b6d4, #0891b2)' }}>
                         {c.name?.[0]?.toUpperCase()}
                       </div>
-                      <p className="text-gray-400 text-xs truncate">{c.name}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-400 text-xs truncate">{c.name}</p>
+                        {c.role && c.role !== 'Viewer' && (
+                          <p className="text-purple-400" style={{ fontSize: '9px' }}>{c.role}</p>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
+            {/* Chat / Editor panel */}
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
 
-                {messages.length <= 1 && activeWorkspace.documents.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {quickPrompts.map((prompt, i) => (
-                      <button key={i} onClick={() => setInput(prompt)}
-                        className="px-3 py-2 rounded-lg text-xs text-purple-300 transition-all hover:opacity-80"
-                        style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {/* ── Tab switcher ──────────────────────────── */}
+              <div className="flex items-center gap-1 px-6 pt-4 pb-0 flex-shrink-0">
+                {[
+                  { id: TAB_CHAT, label: '💬 AI Chat' },
+                  { id: TAB_EDITOR, label: '✏️ Notes' }
+                ].map(tab => (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                    className="px-4 py-2 rounded-t-lg text-sm font-medium transition-all"
+                    style={{
+                      background: activeTab === tab.id ? 'rgba(124,58,237,0.2)' : 'transparent',
+                      color: activeTab === tab.id ? '#a78bfa' : 'rgba(255,255,255,0.4)',
+                      borderBottom: activeTab === tab.id ? '2px solid #7c3aed' : '2px solid transparent'
+                    }}>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-                {messages.map((msg, i) => (
-                  <div key={i}>
-                    {msg.role === 'system' ? (
-                      <div className="flex justify-center">
-                        <span className="text-xs text-gray-600 px-3 py-1 rounded-full"
-                          style={{ background: 'rgba(255,255,255,0.04)' }}>{msg.content}</span>
+              {/* ── Chat Tab ──────────────────────────────── */}
+              {activeTab === TAB_CHAT && (
+                <>
+                  <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+                    {messages.length <= 1 && activeWorkspace.documents.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {quickPrompts.map((prompt, i) => (
+                          <button key={i} onClick={() => setInput(prompt)}
+                            className="px-3 py-2 rounded-lg text-xs text-purple-300 transition-all hover:opacity-80"
+                            style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                            {prompt}
+                          </button>
+                        ))}
                       </div>
-                    ) : (
-                      <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                          style={{
-                            background: msg.role === 'user' ? 'linear-gradient(135deg, #7c3aed44, #06b6d444)' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                            border: '2px solid rgba(124,58,237,0.4)'
-                          }}>
-                          {msg.role === 'user' ? msg.userName?.[0]?.toUpperCase() || '?' : 'N'}
+                    )}
+
+                    {messages.map((msg, i) => (
+                      <div key={i}>
+                        {msg.role === 'system' ? (
+                          <div className="flex justify-center">
+                            <span className="text-xs text-gray-600 px-3 py-1 rounded-full"
+                              style={{ background: 'rgba(255,255,255,0.04)' }}>{msg.content}</span>
+                          </div>
+                        ) : (
+                          <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                              style={{
+                                background: msg.role === 'user' ? 'linear-gradient(135deg, #7c3aed44, #06b6d444)' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                                border: '2px solid rgba(124,58,237,0.4)'
+                              }}>
+                              {msg.role === 'user' ? msg.userName?.[0]?.toUpperCase() || '?' : 'N'}
+                            </div>
+                            <div className="max-w-2xl px-4 py-3 rounded-2xl"
+                              style={{
+                                background: msg.role === 'user' ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.08)'
+                              }}>
+                              <p className="text-xs font-semibold mb-1" style={{ color: msg.role === 'user' ? '#a78bfa' : '#06b6d4' }}>
+                                {msg.userName || (msg.role === 'user' ? user?.name : 'NEURALIQ AI')}
+                              </p>
+                              {msg.role === 'assistant'
+                                ? <MarkdownMessage content={msg.content} />
+                                : <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                              }
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {typingUser && (
+                      <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                          style={{ background: 'rgba(124,58,237,0.3)', border: '2px solid rgba(124,58,237,0.4)' }}>
+                          {typingUser[0]?.toUpperCase()}
                         </div>
-                        <div className="max-w-2xl px-4 py-3 rounded-2xl"
-                          style={{
-                            background: msg.role === 'user' ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.08)'
-                          }}>
-                          <p className="text-xs font-semibold mb-1" style={{ color: msg.role === 'user' ? '#a78bfa' : '#06b6d4' }}>
-                            {msg.userName || (msg.role === 'user' ? user?.name : 'NEURALIQ AI')}
-                          </p>
-                          {msg.role === 'assistant'
-                            ? <MarkdownMessage content={msg.content} />
-                            : <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                          }
+                        <div className="px-4 py-3 rounded-2xl flex items-center gap-1"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <span className="text-gray-500 text-xs">{typingUser} is typing</span>
+                          <div className="flex gap-1 ml-1">
+                            <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-gray-500" style={{ animationDelay: '0ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-gray-500" style={{ animationDelay: '150ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-gray-500" style={{ animationDelay: '300ms' }} />
+                          </div>
                         </div>
                       </div>
                     )}
-                  </div>
-                ))}
 
-                {typingUser && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                      style={{ background: 'rgba(124,58,237,0.3)', border: '2px solid rgba(124,58,237,0.4)' }}>
-                      {typingUser[0]?.toUpperCase()}
-                    </div>
-                    <div className="px-4 py-3 rounded-2xl flex items-center gap-1"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <span className="text-gray-500 text-xs">{typingUser} is typing</span>
-                      <div className="flex gap-1 ml-1">
-                        <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-gray-500" style={{ animationDelay: '0ms' }} />
-                        <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-gray-500" style={{ animationDelay: '150ms' }} />
-                        <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-gray-500" style={{ animationDelay: '300ms' }} />
+                    {loading && (
+                      <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                          style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>N</div>
+                        <div className="px-4 py-3 rounded-2xl flex items-center gap-2"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7c3aed', animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7c3aed', animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7c3aed', animationDelay: '300ms' }} />
+                        </div>
                       </div>
+                    )}
+                    <div ref={bottomRef} />
+                  </div>
+
+                  <div className="px-6 py-4 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div className="flex gap-3">
+                      <input type="text" placeholder="Chat with your team or ask about documents..."
+                        value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} disabled={loading}
+                        className="flex-1 py-3 px-5 rounded-xl outline-none text-white placeholder-gray-600"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
+                      <button onClick={sendMessage} disabled={loading}
+                        className="px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
+                        style={{ background: loading ? 'rgba(124,58,237,0.4)' : 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
+                        ➤ Ask
+                      </button>
                     </div>
                   </div>
-                )}
+                </>
+              )}
 
-                {loading && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                      style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>N</div>
-                    <div className="px-4 py-3 rounded-2xl flex items-center gap-2"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7c3aed', animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7c3aed', animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: '#7c3aed', animationDelay: '300ms' }} />
-                    </div>
-                  </div>
-                )}
-                <div ref={bottomRef} />
-              </div>
-
-              <div className="px-6 py-4 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <div className="flex gap-3">
-                  <input type="text" placeholder="Chat with your team or ask about documents..."
-                    value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} disabled={loading}
-                    className="flex-1 py-3 px-5 rounded-xl outline-none text-white placeholder-gray-600"
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} />
-                  <button onClick={sendMessage} disabled={loading}
-                    className="px-6 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
-                    style={{ background: loading ? 'rgba(124,58,237,0.4)' : 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
-                    ➤ Ask
-                  </button>
+              {/* ── Notes / Collaborative Editor Tab ─────── */}
+              {activeTab === TAB_EDITOR && (
+                <div className="flex-1 overflow-hidden p-4">
+                  <CollaborativeEditor
+                    workspaceId={activeWorkspace._id}
+                    userName={user?.name}
+                    isOwner={isOwner}
+                    userRole={currentUserRole}
+                  />
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}

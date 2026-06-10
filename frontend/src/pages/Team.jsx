@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
-import { getWorkspacesAPI, removeCollaboratorAPI } from '../api'
+import { getWorkspacesAPI, removeCollaboratorAPI, updateCollaboratorRoleAPI } from '../api'
 
-const ROLES = ['Admin', 'Developer', 'Designer', 'Analyst', 'Manager']
+const ROLES = ['Admin', 'Developer', 'Designer', 'Analyst', 'Manager', 'Viewer']
 const STATUSES = ['Online', 'Offline', 'Busy']
 
 export default function Team({ activePage, setActivePage, user, onLogout }) {
   const [workspaces, setWorkspaces] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedRole, setSelectedRole] = useState({})
-  const [selectedStatus, setSelectedStatus] = useState({})
+  // ✅ Tracks pending save state per collaborator _id
+  const [saving, setSaving] = useState({})
+  // ✅ Local overrides for role/status (pre-save)
+  const [roleOverrides, setRoleOverrides] = useState({})
+  const [statusOverrides, setStatusOverrides] = useState({})
+
+  const userId = user?._id || user?.id
 
   useEffect(() => {
     getWorkspacesAPI()
@@ -20,25 +25,32 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
       .catch(() => setLoading(false))
   }, [])
 
+  // ── Build teammates map ───────────────────────────────────
   const teammatesMap = {}
   workspaces.forEach(ws => {
     ws.collaborators?.forEach(c => {
-      if (!teammatesMap[c.email]) {
-        teammatesMap[c.email] = {
+      const key = c.email
+      if (!teammatesMap[key]) {
+        teammatesMap[key] = {
+          _id: c._id,           // ✅ mongo subdoc id — needed for API call
           name: c.name,
           email: c.email,
           avatar: c.avatar || null,
           joinedAt: c.joinedAt,
+          // Use persisted role/status from DB as initial values
+          role: c.role || 'Viewer',
+          status: c.status || 'Online',
           workspaces: [],
           workspaceObjs: []
         }
       }
-      teammatesMap[c.email].workspaces.push(ws.name)
-      teammatesMap[c.email].workspaceObjs.push(ws)
+      teammatesMap[key].workspaces.push(ws.name)
+      teammatesMap[key].workspaceObjs.push(ws)
     })
   })
   const teammates = Object.values(teammatesMap)
 
+  // ── Activity feed ─────────────────────────────────────────
   const activityFeed = []
   workspaces.forEach(ws => {
     ws.documents?.forEach(doc => {
@@ -55,6 +67,7 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
 
   const totalDocs = workspaces.reduce((acc, ws) => acc + ws.documents.length, 0)
 
+  // ── Helpers ───────────────────────────────────────────────
   const timeAgo = (date) => {
     if (!date) return 'recently'
     const diff = new Date() - new Date(date)
@@ -75,24 +88,89 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
 
   const avatarColors = ['#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
 
+  // ── Get current role/status (local override or DB value) ─
+  const getRole = (t) => roleOverrides[t.email] ?? t.role
+  const getStatus = (t) => statusOverrides[t.email] ?? t.status
+
+  // ── Check if user is owner of any workspace this teammate is in
+  const isOwnerOfTeammate = (t) => t.workspaceObjs.some(w => w.userId?.toString() === userId)
+
+  // ── Persist role/status to backend ───────────────────────
+  const handleRoleChange = (t, newRole) => {
+    setRoleOverrides(prev => ({ ...prev, [t.email]: newRole }))
+  }
+
+  const handleStatusChange = (t, newStatus) => {
+    setStatusOverrides(prev => ({ ...prev, [t.email]: newStatus }))
+  }
+
+  const saveRoleStatus = async (t) => {
+    const role = getRole(t)
+    const status = getStatus(t)
+
+    // Find a workspace this user owns that contains this collaborator
+    const ownedWs = t.workspaceObjs.find(w => w.userId?.toString() === userId)
+    if (!ownedWs) {
+      alert('You can only update roles in workspaces you own.')
+      return
+    }
+
+    // Find the collaborator's subdoc _id in that workspace
+    const collab = ownedWs.collaborators?.find(c => c.email === t.email)
+    if (!collab?._id) {
+      alert('Could not find collaborator ID.')
+      return
+    }
+
+    setSaving(prev => ({ ...prev, [t.email]: true }))
+    try {
+      const data = await updateCollaboratorRoleAPI(ownedWs._id, collab._id, role, status)
+      if (data.success) {
+        // Update local workspace state so UI reflects saved values
+        setWorkspaces(prev => prev.map(w => {
+          if (w._id !== ownedWs._id) return w
+          return {
+            ...w,
+            collaborators: w.collaborators.map(c =>
+              c.email === t.email ? { ...c, role, status } : c
+            )
+          }
+        }))
+        // Clear local overrides — DB is now source of truth
+        setRoleOverrides(prev => { const n = { ...prev }; delete n[t.email]; return n })
+        setStatusOverrides(prev => { const n = { ...prev }; delete n[t.email]; return n })
+      } else {
+        alert(data.error || 'Could not update role')
+      }
+    } catch {
+      alert('Could not update role')
+    }
+    setSaving(prev => ({ ...prev, [t.email]: false }))
+  }
+
+  // ── Remove collaborator ───────────────────────────────────
   const handleRemoveTeammate = async (t) => {
     if (!window.confirm(`Remove ${t.name} from workspace?`)) return
     try {
-      const ws = t.workspaceObjs.find(w => w.userId?.toString() === user?.id)
+      const ws = t.workspaceObjs.find(w => w.userId?.toString() === userId)
       if (!ws) return alert('You can only remove teammates from workspaces you own')
       const collabIndex = ws.collaborators.findIndex(c => c.email === t.email)
       if (collabIndex === -1) return
-      await removeCollaboratorAPI(ws._id, collabIndex)
+      const data = await removeCollaboratorAPI(ws._id, collabIndex)
+      if (data.error) { alert(data.error); return }
       setWorkspaces(prev => prev.map(w => {
-        if (w._id === ws._id) {
-          return { ...w, collaborators: w.collaborators.filter((_, i) => i !== collabIndex) }
-        }
-        return w
+        if (w._id !== ws._id) return w
+        return { ...w, collaborators: w.collaborators.filter((_, i) => i !== collabIndex) }
       }))
     } catch {
       alert('Could not remove teammate')
     }
   }
+
+  // ── Check if there are unsaved changes for a teammate ────
+  const hasChanges = (t) =>
+    (roleOverrides[t.email] !== undefined && roleOverrides[t.email] !== t.role) ||
+    (statusOverrides[t.email] !== undefined && statusOverrides[t.email] !== t.status)
 
   return (
     <div className="flex h-screen overflow-hidden"
@@ -150,15 +228,16 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
           <div className="col-span-2 rounded-2xl p-6"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-white font-semibold text-lg">Teammate Management List</h2>
+              <h2 className="text-white font-semibold text-lg">Teammate Management</h2>
               <span className="text-xs text-gray-500 px-3 py-1 rounded-full"
                 style={{ background: 'rgba(255,255,255,0.06)' }}>
                 {teammates.length} collaborators
               </span>
             </div>
 
+            {/* Column headers */}
             <div className="grid gap-3 mb-3 px-3 text-xs text-gray-600 uppercase tracking-widest"
-              style={{ gridTemplateColumns: '40px 1fr 100px 100px 80px 80px' }}>
+              style={{ gridTemplateColumns: '40px 1fr 110px 110px 70px 100px' }}>
               <span>Avatar</span>
               <span>Name</span>
               <span>Role</span>
@@ -187,12 +266,19 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
             ) : (
               <div className="flex flex-col gap-2">
                 {teammates.map((t, i) => {
-                  const role = selectedRole[t.email] || ROLES[i % ROLES.length]
-                  const status = selectedStatus[t.email] || 'Online'
+                  const role = getRole(t)
+                  const status = getStatus(t)
+                  const canManage = isOwnerOfTeammate(t)
+                  const isSaving = saving[t.email]
+                  const changed = hasChanges(t)
+
                   return (
                     <div key={i}
                       className="grid gap-3 items-center px-3 py-3 rounded-xl transition-all hover:bg-white/5"
-                      style={{ gridTemplateColumns: '40px 1fr 100px 100px 80px 80px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      style={{
+                        gridTemplateColumns: '40px 1fr 110px 110px 70px 100px',
+                        border: changed ? '1px solid rgba(124,58,237,0.3)' : '1px solid rgba(255,255,255,0.04)'
+                      }}>
 
                       {/* Avatar */}
                       {t.avatar ? (
@@ -200,30 +286,46 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
                           style={{ border: `2px solid ${avatarColors[i % avatarColors.length]}` }} />
                       ) : (
                         <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
-                          style={{ background: `linear-gradient(135deg, ${avatarColors[i % avatarColors.length]}, ${avatarColors[(i+1) % avatarColors.length]})` }}>
+                          style={{ background: `linear-gradient(135deg, ${avatarColors[i % avatarColors.length]}, ${avatarColors[(i + 1) % avatarColors.length]})` }}>
                           {t.name?.[0]?.toUpperCase()}
                         </div>
                       )}
 
-                      {/* Name + Email */}
+                      {/* Name + workspaces */}
                       <div>
                         <p className="text-white text-sm font-medium">{t.name}</p>
-                        <p className="text-gray-600 text-xs truncate">{t.email}</p>
+                        <p className="text-gray-600 text-xs truncate">{t.workspaces.join(', ')}</p>
                       </div>
 
-                      {/* Role */}
-                      <select value={role}
-                        onChange={(e) => setSelectedRole(prev => ({ ...prev, [t.email]: e.target.value }))}
-                        className="text-xs rounded-lg px-2 py-1 outline-none cursor-pointer"
-                        style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', color: '#a78bfa' }}>
+                      {/* Role — editable only if owner */}
+                      <select
+                        value={role}
+                        onChange={(e) => canManage && handleRoleChange(t, e.target.value)}
+                        disabled={!canManage}
+                        className="text-xs rounded-lg px-2 py-1 outline-none"
+                        style={{
+                          background: 'rgba(124,58,237,0.15)',
+                          border: '1px solid rgba(124,58,237,0.3)',
+                          color: '#a78bfa',
+                          cursor: canManage ? 'pointer' : 'not-allowed',
+                          opacity: canManage ? 1 : 0.5
+                        }}>
                         {ROLES.map(r => <option key={r} value={r} style={{ background: '#0f0a1e' }}>{r}</option>)}
                       </select>
 
-                      {/* Status */}
-                      <select value={status}
-                        onChange={(e) => setSelectedStatus(prev => ({ ...prev, [t.email]: e.target.value }))}
-                        className="text-xs rounded-lg px-2 py-1 outline-none cursor-pointer"
-                        style={{ background: `${getStatusColor(status)}22`, border: `1px solid ${getStatusColor(status)}44`, color: getStatusColor(status) }}>
+                      {/* Status — editable only if owner */}
+                      <select
+                        value={status}
+                        onChange={(e) => canManage && handleStatusChange(t, e.target.value)}
+                        disabled={!canManage}
+                        className="text-xs rounded-lg px-2 py-1 outline-none"
+                        style={{
+                          background: `${getStatusColor(status)}22`,
+                          border: `1px solid ${getStatusColor(status)}44`,
+                          color: getStatusColor(status),
+                          cursor: canManage ? 'pointer' : 'not-allowed',
+                          opacity: canManage ? 1 : 0.5
+                        }}>
                         {STATUSES.map(s => <option key={s} value={s} style={{ background: '#0f0a1e' }}>{s}</option>)}
                       </select>
 
@@ -232,19 +334,35 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
 
                       {/* Actions */}
                       <div className="flex items-center gap-1">
+                        {/* ✅ Save button — only shown when there are unsaved changes */}
+                        {canManage && changed && (
+                          <button
+                            onClick={() => saveRoleStatus(t)}
+                            disabled={isSaving}
+                            title="Save changes"
+                            className="px-2 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+                            style={{ background: 'rgba(124,58,237,0.3)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.4)' }}>
+                            {isSaving ? '...' : '💾'}
+                          </button>
+                        )}
+
                         <button
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all hover:bg-white/10"
-                          title="View workspace" onClick={() => setActivePage('Workspace')}
+                          title="View workspace"
+                          onClick={() => setActivePage('Workspace')}
                           style={{ color: '#06b6d4' }}>
                           👁️
                         </button>
-                        <button
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all hover:bg-red-400/10"
-                          title="Remove teammate"
-                          style={{ color: '#ef4444' }}
-                          onClick={() => handleRemoveTeammate(t)}>
-                          🗑️
-                        </button>
+
+                        {canManage && (
+                          <button
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all hover:bg-red-400/10"
+                            title="Remove teammate"
+                            style={{ color: '#ef4444' }}
+                            onClick={() => handleRemoveTeammate(t)}>
+                            🗑️
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -285,19 +403,19 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
                           <div className="h-2 rounded-full transition-all"
                             style={{
                               width: `${Math.max(progress, ws.documents.length > 0 ? 20 : 5)}%`,
-                              background: `linear-gradient(90deg, ${colors[i % 3]}, ${colors[(i+1) % 3]})`
+                              background: `linear-gradient(90deg, ${colors[i % 3]}, ${colors[(i + 1) % 3]})`
                             }} />
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex -space-x-1">
                             {ws.collaborators?.slice(0, 3).map((c, j) => (
                               <div key={j} className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
-                                style={{ background: `linear-gradient(135deg, ${avatarColors[j % 5]}, ${avatarColors[(j+1) % 5]})`, border: '1px solid rgba(255,255,255,0.2)' }}>
+                                style={{ background: `linear-gradient(135deg, ${avatarColors[j % 5]}, ${avatarColors[(j + 1) % 5]})`, border: '1px solid rgba(255,255,255,0.2)' }}>
                                 {c.name?.[0]?.toUpperCase()}
                               </div>
                             ))}
                           </div>
-                          <p className="text-gray-600 text-xs">Active Tasks</p>
+                          <p className="text-gray-600 text-xs">{ws.collaborators?.length || 0} members</p>
                         </div>
                       </div>
                     )
@@ -309,15 +427,15 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
             {/* Task Distribution Chart */}
             <div className="rounded-2xl p-5"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <h3 className="text-white font-semibold mb-1">Task Distribution Chart</h3>
-              <p className="text-gray-600 text-xs mb-4">Tasks per teammate</p>
+              <h3 className="text-white font-semibold mb-1">Task Distribution</h3>
+              <p className="text-gray-600 text-xs mb-4">Documents per workspace</p>
               {workspaces.length === 0 ? (
                 <p className="text-gray-600 text-xs text-center py-4">No data yet</p>
               ) : (
                 <>
                   <div className="flex items-end gap-2 h-24 mb-1">
                     <div className="flex flex-col justify-between h-full text-right pr-1">
-                      {['35%','25%','10%','0%'].map(l => (
+                      {['35%', '25%', '10%', '0%'].map(l => (
                         <span key={l} className="text-gray-700" style={{ fontSize: '9px' }}>{l}</span>
                       ))}
                     </div>
@@ -372,7 +490,7 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
                   className="flex items-center gap-4 px-4 py-3 rounded-xl transition-all hover:bg-white/5"
                   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${avatarColors[i % 5]}, ${avatarColors[(i+1) % 5]})` }}>
+                    style={{ background: `linear-gradient(135deg, ${avatarColors[i % 5]}, ${avatarColors[(i + 1) % 5]})` }}>
                     {activity.user?.[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1">
@@ -386,13 +504,13 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-lg">{activity.type === 'document' ? '📄' : '💬'}</span>
-                    <button className="w-6 h-6 rounded flex items-center justify-center text-gray-600 hover:text-white hover:bg-white/10 transition-all">⋯</button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
       </div>
     </div>
   )

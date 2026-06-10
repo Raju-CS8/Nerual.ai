@@ -2,13 +2,17 @@ const express = require('express')
 const router = express.Router()
 const multer = require('multer')
 const path = require('path')
+
 const {
   getWorkspaces, createWorkspace, joinWorkspace, addDocument,
-  chatWithWorkspace, deleteDocument, deleteWorkspace, renameWorkspace, removeCollaborator
+  chatWithWorkspace, deleteDocument, deleteWorkspace,
+  renameWorkspace, removeCollaborator,
+  leaveWorkspace, clearChatHistory, updateCollaboratorRole
 } = require('../controllers/workspaceController')
-const { protect } = require('../middleware/authMiddleware')
 
-// ✅ Memory storage — no disk needed, works on Render
+const { protect } = require('../middleware/authMiddleware')
+const { requireOwner, requireAdminOrOwner, requireMember } = require('../middleware/roleMiddleware')
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
@@ -19,14 +23,24 @@ const upload = multer({
   }
 })
 
+// ── Public to members ─────────────────────────────────────────
 router.get('/', protect, getWorkspaces)
 router.post('/', protect, createWorkspace)
 router.post('/join', protect, joinWorkspace)
-router.post('/:workspaceId/documents', protect, upload.single('file'), addDocument)
-router.post('/:workspaceId/chat', protect, chatWithWorkspace)
-router.patch('/:workspaceId/rename', protect, renameWorkspace)
-router.delete('/:workspaceId/documents/:docIndex', protect, deleteDocument)
-router.delete('/:workspaceId/collaborator/:collabIndex', protect, removeCollaborator)
-router.delete('/:workspaceId', protect, deleteWorkspace)
+
+// Any member can chat, upload, clear history, leave
+router.post('/:workspaceId/chat', protect, requireMember, chatWithWorkspace)
+router.post('/:workspaceId/documents', protect, requireMember, upload.single('file'), addDocument)
+router.delete('/:workspaceId/messages', protect, requireMember, clearChatHistory)
+router.delete('/:workspaceId/leave', protect, leaveWorkspace)
+
+// ── Admin or Owner only ───────────────────────────────────────
+router.delete('/:workspaceId/documents/:docIndex', protect, requireAdminOrOwner, deleteDocument)
+router.delete('/:workspaceId/collaborator/:collabIndex', protect, requireAdminOrOwner, removeCollaborator)
+router.patch('/:workspaceId/collaborator/:collabId/role', protect, requireAdminOrOwner, updateCollaboratorRole)
+
+// ── Owner only ────────────────────────────────────────────────
+router.patch('/:workspaceId/rename', protect, requireOwner, renameWorkspace)
+router.delete('/:workspaceId', protect, requireOwner, deleteWorkspace)
 
 module.exports = router

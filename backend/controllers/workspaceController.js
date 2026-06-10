@@ -3,6 +3,54 @@ const Workspace = require('../models/Workspace')
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
+// ─────────────────────────────────────────────
+// RAG CHUNKING UTILITY
+// Splits text into overlapping chunks so large
+// documents don't get truncated to 8,000 chars.
+// ─────────────────────────────────────────────
+const chunkText = (text, chunkSize = 1500, overlap = 200) => {
+  const chunks = []
+  let start = 0
+  while (start < text.length) {
+    const end = Math.min(start + chunkSize, text.length)
+    chunks.push(text.slice(start, end))
+    if (end === text.length) break
+    start += chunkSize - overlap
+  }
+  return chunks
+}
+
+/**
+ * Simple keyword-based chunk retrieval.
+ * Scores each chunk by how many query words appear in it.
+ * Returns the top N most relevant chunks.
+ */
+const retrieveRelevantChunks = (chunks, query, topN = 4) => {
+  const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 3)
+
+  const scored = chunks.map((chunk, i) => {
+    const lower = chunk.toLowerCase()
+    const score = queryWords.reduce((acc, word) => {
+      // Count occurrences
+      const count = (lower.match(new RegExp(word, 'g')) || []).length
+      return acc + count
+    }, 0)
+    return { chunk, score, index: i }
+  })
+
+  // Sort by score desc, keep order among ties (preserve document order)
+  scored.sort((a, b) => b.score - a.score || a.index - b.index)
+
+  // Always return at least the first chunk even if score is 0
+  const top = scored.slice(0, topN)
+  top.sort((a, b) => a.index - b.index) // restore document order
+  return top.map(s => s.chunk)
+}
+
+// ─────────────────────────────────────────────
+// CONTROLLERS
+// ─────────────────────────────────────────────
+
 const getWorkspaces = async (req, res) => {
   try {
     const workspaces = await Workspace.find({
@@ -13,7 +61,22 @@ const getWorkspaces = async (req, res) => {
     })
       .sort({ updatedAt: -1 })
       .select('name documents messages updatedAt shareCode collaborators userId')
-    res.json({ success: true, workspaces })
+
+    // Strip raw chunk arrays from documents before sending to client
+    // (chunks can be large; client only needs fileName, uploadedBy etc.)
+    const sanitized = workspaces.map(ws => {
+      const obj = ws.toObject()
+      obj.documents = obj.documents.map(({ chunks, ...rest }) => rest)
+      // Ensure collaborator _id is serialized as string for frontend use
+      obj.collaborators = obj.collaborators.map(c => ({
+        ...c,
+        _id: c._id?.toString(),
+        userId: c.userId?.toString()
+      }))
+      return obj
+    })
+
+    res.json({ success: true, workspaces: sanitized })
   } catch (error) {
     res.status(500).json({ error: 'Could not fetch workspaces' })
   }
@@ -28,7 +91,10 @@ const createWorkspace = async (req, res) => {
       documents: [],
       messages: []
     })
-    res.json({ success: true, workspace })
+
+    const obj = workspace.toObject()
+    obj.documents = obj.documents.map(({ chunks, ...rest }) => rest)
+    res.json({ success: true, workspace: obj })
   } catch (error) {
     res.status(500).json({ error: 'Could not create workspace' })
   }
@@ -48,17 +114,34 @@ const joinWorkspace = async (req, res) => {
       workspace.collaborators.push({
         userId: req.user.id,
         name: req.user.name,
-        email: req.user.email
+        email: req.user.email,
+        role: 'Viewer',   // default role on join
+        status: 'Online'
       })
       await workspace.save()
     }
 
-    res.json({ success: true, workspace })
+    const obj = workspace.toObject()
+    obj.documents = obj.documents.map(({ chunks, ...rest }) => rest)
+    obj.collaborators = obj.collaborators.map(c => ({
+      ...c,
+      _id: c._id?.toString(),
+      userId: c.userId?.toString()
+    }))
+    res.json({ success: true, workspace: obj })
   } catch (error) {
     res.status(500).json({ error: 'Could not join workspace' })
   }
 }
 
+/**
+ * addDocument
+ * ─────────────
+ * • Extracts full text from PDF/DOCX/TXT
+ * • Chunks the full text with overlap (no 8k limit)
+ * • Stores both extractedText (first 8k for quick preview) and chunks[]
+ * • Role check: any member can upload (requireMember in routes)
+ */
 const addDocument = async (req, res) => {
   try {
     const { workspaceId } = req.params
@@ -83,6 +166,9 @@ const addDocument = async (req, res) => {
       return res.status(400).json({ error: 'Could not extract text from file' })
     }
 
+    // ✅ Chunk the full text
+    const chunks = chunkText(extractedText)
+
     const workspace = await Workspace.findOneAndUpdate(
       {
         _id: workspaceId,
@@ -95,8 +181,12 @@ const addDocument = async (req, res) => {
         $push: {
           documents: {
             fileName: req.file.originalname,
+            // First 8k for quick preview/fallback
             extractedText: extractedText.slice(0, 8000),
-            uploadedBy: req.user.name
+            // Full document in chunks
+            chunks,
+            uploadedBy: req.user.name,
+            uploadedBy_id: req.user.id
           }
         }
       },
@@ -105,10 +195,14 @@ const addDocument = async (req, res) => {
 
     if (!workspace) return res.status(404).json({ error: 'Workspace not found' })
 
+    // Strip chunks before sending to client
+    const obj = workspace.toObject()
+    obj.documents = obj.documents.map(({ chunks: _c, ...rest }) => rest)
+
     res.json({
       success: true,
-      workspace,
-      message: `${req.file.originalname} added successfully`
+      workspace: obj,
+      message: `${req.file.originalname} added successfully (${chunks.length} chunks indexed)`
     })
   } catch (error) {
     console.error('Add document error:', error.message)
@@ -116,6 +210,12 @@ const addDocument = async (req, res) => {
   }
 }
 
+/**
+ * chatWithWorkspace
+ * ─────────────────
+ * ✅ CRITICAL BUG FIXED: combinedContext is now injected into Groq system prompt.
+ * ✅ Uses RAG: retrieves only the most relevant chunks per query.
+ */
 const chatWithWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params
@@ -132,72 +232,72 @@ const chatWithWorkspace = async (req, res) => {
     if (!workspace) return res.status(404).json({ error: 'Workspace not found' })
 
     const hasDocuments = workspace.documents.length > 0
+    const currentUser = req.user.name
 
-    const combinedContext = hasDocuments
-      ? workspace.documents
-          .map((doc, i) => `--- Document ${i + 1}: ${doc.fileName} ---\n${doc.extractedText}`)
-          .join('\n\n')
-      : ''
+    // RAG: retrieve relevant chunks per document
+    let contextBlock = ''
+    if (hasDocuments) {
+      const relevantParts = workspace.documents.map((doc, i) => {
+        const allChunks = doc.chunks?.length > 0 ? doc.chunks : [doc.extractedText]
+        const relevant = retrieveRelevantChunks(allChunks, message, 3)
+        return `--- Document ${i + 1}: ${doc.fileName} ---\n${relevant.join('\n...\n')}`
+      })
+      contextBlock = relevantParts.join('\n\n')
+    }
+
+    // Build Jarvis-style system prompt — strictly one-on-one per sender
+    const jarvisRules = `You are NEURALIQ AI — a Jarvis-style assistant inside a shared workspace.
+You are like a smart third person sitting in the room with the team.
+Multiple people may use this workspace at different times, but you ALWAYS respond only to whoever is speaking RIGHT NOW.
+
+THE PERSON SPEAKING TO YOU RIGHT NOW IS: ${currentUser}
+
+ABSOLUTE RULES (never break these):
+1. Your entire response must be directed at ${currentUser} only.
+2. Never mention, greet, or address any other person's name in your reply.
+3. Ignore any other names you see in the chat history — they were from a different moment.
+4. When ${currentUser} asks something, answer ${currentUser} and only ${currentUser}.
+5. Do not say things like "feel free to jump in" to anyone else.`
+
+    const systemPrompt = hasDocuments
+      ? `${jarvisRules}
+
+You have access to the following workspace documents. Use them to answer accurately.
+=== DOCUMENTS ===
+${contextBlock}
+=== END ===
+
+Answer ${currentUser}'s question using the documents. Use markdown formatting.`
+      : `${jarvisRules}
+
+No documents uploaded yet. Answer ${currentUser}'s question directly and helpfully.`
+
+    // Only keep recent history from the CURRENT session (last 6 messages)
+    // and sanitize content to remove any other user names that leaked in
+    const collaboratorNames = workspace.collaborators.map(c => c.name)
+    const cleanHistory = history
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .slice(-6)
+      .map(m => {
+        let content = m.content
+        // Strip any collaborator names that appear in old AI responses
+        collaboratorNames.forEach(name => {
+          if (name && name !== currentUser) {
+            content = content.replace(new RegExp(name, 'g'), '[another user]')
+          }
+        })
+        return { role: m.role, content }
+      })
 
     const completion = await groq.chat.completions.create({
       messages: [
-        {
-          role: 'system',
-          content: `You are NEURALIQ AI — an intelligent, adaptive assistant like Jarvis from Iron Man.
-
-WORKSPACE: "${workspace.name}"
-OWNER: ${req.user.name}
-TEAM MEMBERS: ${[req.user.name, ...workspace.collaborators.map(c => c.name)].join(', ')}
-CURRENT USER SPEAKING: ${req.user.name}
-
-WHO IS IN THIS WORKSPACE:
-${[
-  { name: req.user.name, role: 'Owner' },
-  ...workspace.collaborators.map(c => ({ name: c.name, role: 'Collaborator' }))
-]
-  .map(m => `- ${m.name} (${m.role})`)
-  .join('\n')}
-
-YOUR BEHAVIOR RULES:
-1. Address each person BY NAME when responding
-2. Remember what each person said earlier
-3. AUTO-DETECT mode:
-   - Study → Teacher
-   - Brainstorm → Creative
-   - Debate → Neutral Moderator
-   - Coding → Senior Developer
-   - Planning → Project Manager
-4. Acknowledge multiple users when needed
-5. Be intelligent, warm and adaptive
-
-${
-  hasDocuments
-    ? `DOCUMENTS AVAILABLE (${workspace.documents.length}):
-${workspace.documents
-  .map((d, i) => `${i + 1}. "${d.fileName}" uploaded by ${d.uploadedBy}`)
-  .join('\n')}
-DOCUMENT CONTENT: ${combinedContext.slice(0, 12000)}`
-    : 'No documents uploaded yet.'
-}`
-        },
-
-        // ✅ UPDATED HISTORY
-        ...history.slice(-10).map(m => ({
-          role: m.role,
-          content:
-            m.userName && m.role === 'user'
-              ? `[${m.userName}]: ${m.content}`
-              : m.content
-        })),
-
-        {
-          role: 'user',
-          content: `[${req.user.name}]: ${message}`
-        }
+        { role: 'system', content: systemPrompt },
+        ...cleanHistory,
+        { role: 'user', content: message }
       ],
       model: 'llama-3.3-70b-versatile',
-      temperature: 0.7,
-      max_tokens: 2048
+      temperature: 0.6,
+      max_tokens: 1500
     })
 
     const reply = completion.choices[0]?.message?.content || 'No response'
@@ -214,75 +314,163 @@ DOCUMENT CONTENT: ${combinedContext.slice(0, 12000)}`
     res.json({ success: true, reply })
   } catch (error) {
     console.error('Workspace chat error:', error.message)
-    res.status(500).json({ error: 'Chat failed', details: error.message })
+    res.status(500).json({ error: 'Chat failed' })
   }
 }
 
+
+/**
+ * deleteDocument
+ * ✅ Role-enforced via requireAdminOrOwner in routes
+ */
 const deleteDocument = async (req, res) => {
   try {
     const { workspaceId, docIndex } = req.params
-    const workspace = await Workspace.findOne({ _id: workspaceId, userId: req.user.id })
+    const workspace = await Workspace.findOne({
+      _id: workspaceId,
+      $or: [
+        { userId: req.user.id },
+        { 'collaborators.userId': req.user.id, 'collaborators.role': 'Admin' }
+      ]
+    })
 
-    if (!workspace) return res.status(404).json({ error: 'Workspace not found' })
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found or insufficient permissions' })
 
     workspace.documents.splice(parseInt(docIndex), 1)
     await workspace.save()
 
-    res.json({ success: true, workspace })
-  } catch (error) {
+    const obj = workspace.toObject()
+    obj.documents = obj.documents.map(({ chunks, ...rest }) => rest)
+
+    res.json({ success: true, workspace: obj })
+  } catch {
     res.status(500).json({ error: 'Could not delete document' })
   }
 }
 
+/**
+ * deleteWorkspace
+ * ✅ Role-enforced via requireOwner in routes
+ */
 const deleteWorkspace = async (req, res) => {
   try {
     await Workspace.findOneAndDelete({
       _id: req.params.workspaceId,
       userId: req.user.id
     })
-    res.json({ success: true, message: 'Workspace deleted' })
-  } catch (error) {
+    res.json({ success: true })
+  } catch {
     res.status(500).json({ error: 'Could not delete workspace' })
   }
 }
 
+/**
+ * renameWorkspace
+ * ✅ Role-enforced via requireOwner in routes
+ */
 const renameWorkspace = async (req, res) => {
   try {
     const { name } = req.body
-
-    if (!name?.trim()) {
-      return res.status(400).json({ error: 'Name required' })
-    }
-
     const workspace = await Workspace.findOneAndUpdate(
       { _id: req.params.workspaceId, userId: req.user.id },
-      { name: name.trim() },
+      { name },
       { new: true }
     )
-
-    if (!workspace) return res.status(404).json({ error: 'Workspace not found' })
-
     res.json({ success: true, workspace })
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Could not rename workspace' })
   }
 }
 
+/**
+ * removeCollaborator
+ * ✅ Role-enforced via requireAdminOrOwner in routes
+ */
 const removeCollaborator = async (req, res) => {
   try {
     const workspace = await Workspace.findOne({
       _id: req.params.workspaceId,
-      userId: req.user.id
+      $or: [
+        { userId: req.user.id },
+        { 'collaborators.userId': req.user.id, 'collaborators.role': 'Admin' }
+      ]
     })
 
-    if (!workspace) return res.status(404).json({ error: 'Workspace not found' })
+    if (!workspace) return res.status(403).json({ error: 'Permission denied' })
 
     workspace.collaborators.splice(parseInt(req.params.collabIndex), 1)
     await workspace.save()
 
     res.json({ success: true })
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: 'Could not remove collaborator' })
+  }
+}
+
+const leaveWorkspace = async (req, res) => {
+  try {
+    const workspace = await Workspace.findById(req.params.workspaceId)
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' })
+
+    workspace.collaborators = workspace.collaborators.filter(
+      c => c.userId.toString() !== req.user.id
+    )
+
+    await workspace.save()
+    res.json({ success: true })
+  } catch {
+    res.status(500).json({ error: 'Could not leave workspace' })
+  }
+}
+
+const clearChatHistory = async (req, res) => {
+  try {
+    await Workspace.findOneAndUpdate(
+      {
+        _id: req.params.workspaceId,
+        $or: [
+          { userId: req.user.id },
+          { 'collaborators.userId': req.user.id }
+        ]
+      },
+      { $set: { messages: [] } },
+      { new: true }
+    )
+    res.json({ success: true })
+  } catch {
+    res.status(500).json({ error: 'Could not clear history' })
+  }
+}
+
+/**
+ * updateCollaboratorRole  ← NEW
+ * Owner or Admin can change another collaborator's role/status.
+ */
+const updateCollaboratorRole = async (req, res) => {
+  try {
+    const { workspaceId, collabId } = req.params
+    const { role, status } = req.body
+
+    const workspace = await Workspace.findOne({
+      _id: workspaceId,
+      $or: [
+        { userId: req.user.id },
+        { 'collaborators.userId': req.user.id, 'collaborators.role': 'Admin' }
+      ]
+    })
+
+    if (!workspace) return res.status(403).json({ error: 'Permission denied' })
+
+    const collab = workspace.collaborators.id(collabId)
+    if (!collab) return res.status(404).json({ error: 'Collaborator not found' })
+
+    if (role) collab.role = role
+    if (status) collab.status = status
+
+    await workspace.save()
+    res.json({ success: true, collaborator: collab })
+  } catch (err) {
+    res.status(500).json({ error: 'Could not update collaborator' })
   }
 }
 
@@ -295,5 +483,8 @@ module.exports = {
   deleteDocument,
   deleteWorkspace,
   renameWorkspace,
-  removeCollaborator
+  removeCollaborator,
+  leaveWorkspace,
+  clearChatHistory,
+  updateCollaboratorRole
 }

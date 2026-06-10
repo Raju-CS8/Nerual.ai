@@ -10,7 +10,10 @@ import Workspace from './pages/Workspace'
 import Team from './pages/Team'
 
 function App() {
-  const [activePage, setActivePage] = useState('Dashboard')
+  // ✅ Reads saved page from localStorage on first load
+  const [activePage, setActivePage] = useState(() => {
+    return localStorage.getItem('neuraliq_page') || 'Dashboard'
+  })
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const isMounted = useRef(true)
@@ -18,6 +21,7 @@ function App() {
   const handleLogout = useCallback(() => {
     localStorage.removeItem('neuraliq_token')
     localStorage.removeItem('neuraliq_user')
+    localStorage.removeItem('neuraliq_page')
     setUser(null)
     setActivePage('Dashboard')
   }, [])
@@ -72,6 +76,8 @@ function App() {
   }
 
   const handleSetActivePage = useCallback((page) => {
+    // ✅ Save to localStorage so Ctrl+R restores the same page
+    localStorage.setItem('neuraliq_page', page)
     setActivePage(page)
     if (page === 'Dashboard') {
       const token = localStorage.getItem('neuraliq_token')

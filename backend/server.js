@@ -22,7 +22,7 @@ const app = express()
 app.set('trust proxy', 1)
 const server = http.createServer(app)
 
-// ✅ Allowed origins — hardcoded + env fallback
+// ✅ Allowed origins
 const allowedOrigins = [
   'http://localhost:5173',
   'https://nerual-ai.vercel.app',
@@ -30,11 +30,37 @@ const allowedOrigins = [
   process.env.FRONTEND_URL
 ].filter(Boolean)
 
+// ✅ Socket.io for workspace presence/chat
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
+  }
+})
+
+// ✅ Yjs WebSocket server for collaborative editor
+// Runs on a SEPARATE path (/yjs) so it doesn't conflict with Socket.io
+const WebSocket = require('ws')
+const yjsWss = new WebSocket.Server({ noServer: true })
+
+// y-websocket newer versions don't export bin/utils
+// Simple broadcast relay — Yjs CRDT sync works via client-side provider
+yjsWss.on('connection', (ws) => {
+  ws.on('message', (msg) => {
+    yjsWss.clients.forEach(client => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(msg)
+      }
+    })
+  })
+})
+
+server.on('upgrade', (req, socket, head) => {
+  if (req.url.startsWith('/yjs')) {
+    yjsWss.handleUpgrade(req, socket, head, (ws) => {
+      yjsWss.emit('connection', ws, req)
+    })
   }
 })
 
@@ -121,7 +147,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Something went wrong' })
 })
 
-// ✅ Socket.io
+// ✅ Socket.io — workspace presence & chat
 const workspaceUsers = {}
 
 io.on('connection', (socket) => {
@@ -171,7 +197,7 @@ io.on('connection', (socket) => {
   })
 })
 
-// ✅ Keep Render free tier alive — ping every 14 minutes
+// ✅ Keep Render free tier alive
 const https = require('https')
 setInterval(() => {
   https.get('https://nerual-ai.onrender.com', (res) => {
@@ -183,4 +209,5 @@ setInterval(() => {
 
 server.listen(PORT, () => {
   console.log(`✅ NEURALIQ backend running at http://localhost:${PORT}`)
+  console.log(`✅ Yjs WebSocket server ready at ws://localhost:${PORT}/yjs`)
 })

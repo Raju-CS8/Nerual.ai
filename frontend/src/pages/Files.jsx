@@ -1,14 +1,17 @@
 import { useState, useRef } from 'react'
 import Sidebar from '../components/Sidebar'
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 export default function Files({ activePage, setActivePage, user, onLogout }) {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [fileName, setFileName] = useState(null)
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
-  const [pdfText, setPdfText] = useState(null) // store extracted text
-  const [messages, setMessages] = useState([])  // chat messages
+  const [pdfText, setPdfText] = useState(null)
+  const [chunks, setChunks] = useState([])
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const fileInputRef = useRef(null)
@@ -26,6 +29,7 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
 
     setError('')
     setPdfText(null)
+    setChunks([])
     setMessages([])
     setFileName(file.name)
     setUploading(true)
@@ -43,11 +47,21 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch('https://nerual-ai.onrender.com/api/files/upload', {
+      // ✅ Uses env variable instead of hardcoded Render URL
+      const res = await fetch(`${BASE_URL}/files/upload`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       })
+
+      // ✅ Token expiry check
+      if (res.status === 401) {
+        localStorage.removeItem('neuraliq_token')
+        localStorage.removeItem('neuraliq_user')
+        localStorage.removeItem('neuraliq_page')
+        window.location.reload()
+        return
+      }
 
       const data = await res.json()
       clearInterval(interval)
@@ -57,11 +71,9 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
         setError(data.error)
       } else {
         setPdfText(data.extractedText)
-        // Add initial AI summary as first message
-        setMessages([{
-          role: 'assistant',
-          content: data.summary
-        }])
+        // ✅ Store chunks for RAG-based chat on large docs
+        setChunks(data.chunks || [])
+        setMessages([{ role: 'assistant', content: data.summary }])
       }
     } catch {
       setError('Upload failed. Make sure backend is running.')
@@ -81,21 +93,38 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
 
     const userMsg = { role: 'user', content: input }
     setMessages(prev => [...prev, userMsg])
+    const currentInput = input
     setInput('')
     setChatLoading(true)
 
     try {
       const token = localStorage.getItem('neuraliq_token')
-      const res = await fetch('https://nerual-ai.onrender.com/api/files/chat', {
+
+      // ✅ Uses env variable instead of hardcoded Render URL
+      const res = await fetch(`${BASE_URL}/files/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ question: input, pdfText })
+        // ✅ Sends chunks for RAG if available, falls back to pdfText
+        body: JSON.stringify({
+          question: currentInput,
+          pdfText,
+          chunks: chunks.length > 0 ? chunks : undefined
+        })
       })
-      const data = await res.json()
 
+      // ✅ Token expiry check
+      if (res.status === 401) {
+        localStorage.removeItem('neuraliq_token')
+        localStorage.removeItem('neuraliq_user')
+        localStorage.removeItem('neuraliq_page')
+        window.location.reload()
+        return
+      }
+
+      const data = await res.json()
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: data.reply || data.error || 'No response'
@@ -153,21 +182,14 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
                 minHeight: '200px'
               }}>
               <span className="text-4xl">📎</span>
-              <p className="text-white font-medium text-center text-sm">
-                Drag & drop or browse
-              </p>
+              <p className="text-white font-medium text-center text-sm">Drag & drop or browse</p>
               <p className="text-gray-500 text-xs text-center">PDF, DOCX, TXT (Max 50MB)</p>
               <button className="px-4 py-2 rounded-xl text-white text-sm font-medium"
                 style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>
                 Browse Files
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.txt,.docx"
-                className="hidden"
-                onChange={(e) => handleFile(e.target.files[0])}
-              />
+              <input ref={fileInputRef} type="file" accept=".pdf,.txt,.docx" className="hidden"
+                onChange={(e) => handleFile(e.target.files[0])} />
             </div>
 
             {/* Upload Progress */}
@@ -196,7 +218,9 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
                   <span>📄</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium truncate">{fileName}</p>
-                    <p className="text-green-400 text-xs">✓ Ready to chat</p>
+                    <p className="text-green-400 text-xs">
+                      ✓ Ready to chat{chunks.length > 0 ? ` · ${chunks.length} chunks indexed` : ''}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -246,7 +270,7 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
                 <div className="flex flex-col items-center justify-center h-full gap-3">
                   <span className="text-5xl">🤖</span>
                   <p className="text-gray-500 text-sm text-center">
-                    Upload a PDF and I'll analyze it for you.<br/>
+                    Upload a PDF and I'll analyze it for you.<br />
                     Then ask me anything about the document!
                   </p>
                 </div>
@@ -305,23 +329,17 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
             <div className="px-6 py-4 flex-shrink-0"
               style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               <div className="flex gap-3">
-                <input
-                  type="text"
+                <input type="text"
                   placeholder={pdfText ? 'Ask anything about your document...' : 'Upload a file first...'}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={!pdfText || chatLoading}
+                  value={input} onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown} disabled={!pdfText || chatLoading}
                   className="flex-1 py-3 px-4 rounded-xl outline-none text-white placeholder-gray-600"
                   style={{
                     background: 'rgba(255,255,255,0.06)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     opacity: pdfText ? 1 : 0.5
-                  }}
-                />
-                <button
-                  onClick={sendQuestion}
-                  disabled={!pdfText || chatLoading}
+                  }} />
+                <button onClick={sendQuestion} disabled={!pdfText || chatLoading}
                   className="px-5 py-3 rounded-xl font-semibold text-white transition-all"
                   style={{
                     background: pdfText ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'rgba(124,58,237,0.3)',
