@@ -474,6 +474,50 @@ const updateCollaboratorRole = async (req, res) => {
   }
 }
 
+
+/**
+ * getNotes — load saved editor content
+ */
+const getNotes = async (req, res) => {
+  try {
+    const workspace = await Workspace.findOne({
+      _id: req.params.workspaceId,
+      $or: [
+        { userId: req.user.id },
+        { 'collaborators.userId': req.user.id }
+      ]
+    }).select('notes')
+
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' })
+    res.json({ success: true, notes: workspace.notes || '' })
+  } catch {
+    res.status(500).json({ error: 'Could not fetch notes' })
+  }
+}
+
+/**
+ * saveNotes — persist editor HTML to DB
+ */
+const saveNotes = async (req, res) => {
+  try {
+    const { notes } = req.body
+    await Workspace.findOneAndUpdate(
+      {
+        _id: req.params.workspaceId,
+        $or: [
+          { userId: req.user.id },
+          { 'collaborators.userId': req.user.id }
+        ]
+      },
+      { $set: { notes } },
+      { new: true }
+    )
+    res.json({ success: true })
+  } catch {
+    res.status(500).json({ error: 'Could not save notes' })
+  }
+}
+
 module.exports = {
   getWorkspaces,
   createWorkspace,
@@ -486,5 +530,7 @@ module.exports = {
   removeCollaborator,
   leaveWorkspace,
   clearChatHistory,
-  updateCollaboratorRole
+  updateCollaboratorRole,
+  getNotes,
+  saveNotes
 }

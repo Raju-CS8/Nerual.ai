@@ -63,7 +63,12 @@ const workspaceSchema = new mongoose.Schema({
       userName: String,
       createdAt: { type: Date, default: Date.now }
     }
-  ]
+  ],
+  // ✅ Persisted notes content (HTML from TipTap editor)
+  notes: {
+    type: String,
+    default: ''
+  }
 }, { timestamps: true })
 
 module.exports = mongoose.model('Workspace', workspaceSchema)

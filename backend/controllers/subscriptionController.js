@@ -7,8 +7,9 @@ const upgradeToPro = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user.id,
       {
-        plan: 'pro',
-        tokensUsed: 0 // reset tokens on upgrade
+        plan: 'pro'
+        // ✅ FIXED: removed tokensUsed: 0 — never reset usage on plan change
+        // Token history should always be preserved regardless of plan
       },
       { new: true }
     ).select('-password')

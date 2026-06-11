@@ -7,7 +7,8 @@ const {
   getWorkspaces, createWorkspace, joinWorkspace, addDocument,
   chatWithWorkspace, deleteDocument, deleteWorkspace,
   renameWorkspace, removeCollaborator,
-  leaveWorkspace, clearChatHistory, updateCollaboratorRole
+  leaveWorkspace, clearChatHistory, updateCollaboratorRole,
+  getNotes, saveNotes
 } = require('../controllers/workspaceController')
 
 const { protect } = require('../middleware/authMiddleware')
@@ -42,5 +43,9 @@ router.patch('/:workspaceId/collaborator/:collabId/role', protect, requireAdminO
 // ── Owner only ────────────────────────────────────────────────
 router.patch('/:workspaceId/rename', protect, requireOwner, renameWorkspace)
 router.delete('/:workspaceId', protect, requireOwner, deleteWorkspace)
+
+// Notes — any member can read/write
+router.get('/:workspaceId/notes', protect, requireMember, getNotes)
+router.patch('/:workspaceId/notes', protect, requireMember, saveNotes)
 
 module.exports = router
