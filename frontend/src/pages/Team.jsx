@@ -431,6 +431,11 @@ export default function Team({ activePage, setActivePage, user, onLogout }) {
               <p className="text-gray-600 text-xs mb-4">Documents per workspace</p>
               {workspaces.length === 0 ? (
                 <p className="text-gray-600 text-xs text-center py-4">No data yet</p>
+              ) : totalDocs === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 gap-2">
+                  <span className="text-2xl">📊</span>
+                  <p className="text-gray-600 text-xs text-center">Upload documents to workspaces to see distribution</p>
+                </div>
               ) : (
                 <>
                   <div className="flex items-end gap-2 h-24 mb-1">
