@@ -5,6 +5,7 @@ import { getUsageStatsAPI } from '../api'
 export default function Dashboard({ activePage, setActivePage, user, onLogout }) {
   const [stats, setStats] = useState([])
 
+  // ✅ Logic preserved exactly
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -17,6 +18,7 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
     fetchStats()
   }, [])
 
+  // ✅ All calculations preserved exactly
   const bars = [30, 45, 35, 60, 40, 55, 70, 50, 65, 75, 45, 80]
   const FREE_LIMIT = 100000
   const tokensUsed = user?.tokensUsed || 0
@@ -35,274 +37,353 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
     : 'M30,120 L410,120'
 
   const areaPath = graphPoints.length > 1
-    ? `M${graphPoints.map(p => `${p.x},${p.y}`).join(' L')} L${graphPoints[graphPoints.length-1].x},130 L30,130 Z`
+    ? `M${graphPoints.map(p => `${p.x},${p.y}`).join(' L')} L${graphPoints[graphPoints.length - 1].x},130 L30,130 Z`
     : 'M30,120 L410,120 L410,130 L30,130 Z'
 
-  return (
-    <div className="flex h-screen overflow-hidden"
-      style={{ background: 'radial-gradient(ellipse at 30% 20%, #1a0533 0%, #050816 60%)' }}>
+  const isWarning = !isPro && usagePercent >= 80
+  const isLimit   = !isPro && usagePercent >= 100
 
+  // ── Shared card style ────────────────────────────────────
+  const card = {
+    background: 'linear-gradient(160deg, #16162a 0%, #0f0f1a 100%)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: '16px',
+    padding: '24px',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+  }
+
+  return (
+    <div style={{
+      display: 'flex', height: '100vh', overflow: 'hidden',
+      background: 'radial-gradient(ellipse 80% 60% at 20% -5%, rgba(124,58,237,0.11) 0%, #08080f 65%)',
+    }}>
       <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
-      <div className="flex-1 overflow-y-auto p-8">
+      <div style={{ flex: 1, overflowY: 'auto', padding: '36px' }} className="page-enter">
 
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white">
-            <span className="font-bold">NEURALIQ.</span>
-            <span className="font-light"> Dashboard.</span>
-          </h1>
-          <p className="text-gray-400 mt-1">Welcome back, {user?.name || 'User'}.</p>
-
-          {/* ✅ Token Warning Banner */}
-          {!isPro && usagePercent >= 80 && (
-            <div className="mt-4 px-5 py-4 rounded-xl flex items-center justify-between"
-              style={{
-                background: usagePercent >= 100 ? 'rgba(239,68,68,0.15)' : 'rgba(251,191,36,0.1)',
-                border: `1px solid ${usagePercent >= 100 ? 'rgba(239,68,68,0.4)' : 'rgba(251,191,36,0.3)'}`
-              }}>
-              <p className="font-medium text-sm"
-                style={{ color: usagePercent >= 100 ? '#f87171' : '#fbbf24' }}>
-                {usagePercent >= 100
-                  ? '🚫 Token limit reached! Upgrade to Pro to continue chatting.'
-                  : `⚠️ ${usagePercent.toFixed(0)}% of free tokens used. Running low!`}
+        {/* ── Header ──────────────────────────────────────── */}
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h1 style={{ fontSize: '27px', fontWeight: 800, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                Dashboard
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.32)', marginTop: '7px', fontSize: '14px' }}>
+                Welcome back,&nbsp;
+                <span style={{ color: 'rgba(196,181,253,0.85)', fontWeight: 500 }}>
+                  {user?.name || 'User'}
+                </span>
               </p>
+            </div>
+
+            {/* Plan badge */}
+            {isPro ? (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '7px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: 700,
+                background: 'linear-gradient(135deg, rgba(124,58,237,0.22), rgba(6,182,212,0.18))',
+                border: '1px solid rgba(124,58,237,0.32)', color: '#c4b5fd',
+              }}>
+                ✦ Pro Plan Active
+              </span>
+            ) : (
+              <span style={{
+                padding: '7px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: 600,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
+                color: 'rgba(255,255,255,0.38)',
+              }}>
+                Free Plan
+              </span>
+            )}
+          </div>
+
+          {/* ✅ Token warning — logic preserved exactly */}
+          {isWarning && (
+            <div style={{
+              marginTop: '18px', padding: '14px 20px', borderRadius: '13px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+              background: isLimit ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.07)',
+              border: `1px solid ${isLimit ? 'rgba(239,68,68,0.24)' : 'rgba(245,158,11,0.2)'}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '18px' }}>{isLimit ? '⛔' : '⚠️'}</span>
+                <p style={{ fontSize: '13.5px', fontWeight: 500, color: isLimit ? '#fca5a5' : '#fcd34d' }}>
+                  {isLimit
+                    ? 'Token limit reached — upgrade to Pro to keep chatting.'
+                    : `${usagePercent.toFixed(0)}% of your free tokens used. Running low.`}
+                </p>
+              </div>
               <button
                 onClick={() => setActivePage('Pricing')}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white ml-4 transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
-                Upgrade ⭐
+                style={{
+                  padding: '8px 18px', borderRadius: '9px', fontSize: '12px', fontWeight: 700,
+                  background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white',
+                  border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                  boxShadow: '0 2px 12px rgba(124,58,237,0.35)',
+                }}>
+                Upgrade →
               </button>
-            </div>
-          )}
-
-          {/* Pro Badge */}
-          {isPro && (
-            <div className="mt-4 px-5 py-3 rounded-xl inline-flex items-center gap-2"
-              style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)' }}>
-              <span className="text-purple-400 font-medium text-sm">⭐ Pro Plan — Unlimited tokens active</span>
             </div>
           )}
         </div>
 
-        {/* Top Cards */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        {/* ── Top row ─────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
 
-          {/* Tokens Used */}
-          <div className="rounded-2xl p-6" style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)'
-          }}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-gray-300 font-medium">Tokens Used</span>
-              <span className="text-xs px-3 py-1 rounded-full"
-                style={{
-                  background: usagePercent >= 80 && !isPro ? 'rgba(239,68,68,0.2)' : 'rgba(124,58,237,0.2)',
-                  color: usagePercent >= 80 && !isPro ? '#f87171' : '#a78bfa',
-                  border: `1px solid ${usagePercent >= 80 && !isPro ? 'rgba(239,68,68,0.3)' : 'rgba(124,58,237,0.3)'}`
-                }}>
+          {/* Tokens card */}
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '22px' }}>
+              <div>
+                <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.26)', marginBottom: '10px' }}>
+                  Tokens Used
+                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{ fontSize: '38px', fontWeight: 800, color: 'white', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                    {tokensUsed.toLocaleString()}
+                  </span>
+                  <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.22)', fontWeight: 500 }}>
+                    {isPro ? '/ ∞' : '/ 100,000'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Usage badge */}
+              <span style={{
+                fontSize: '11px', fontWeight: 700, padding: '4px 11px', borderRadius: '999px',
+                background: isWarning ? 'rgba(239,68,68,0.14)' : 'rgba(124,58,237,0.16)',
+                color: isWarning ? '#fca5a5' : '#c4b5fd',
+                border: `1px solid ${isWarning ? 'rgba(239,68,68,0.24)' : 'rgba(124,58,237,0.24)'}`,
+              }}>
                 {isPro ? '∞ Unlimited' : `${usagePercent.toFixed(0)}% used`}
               </span>
             </div>
-            <div className="flex items-end gap-2 mb-3">
-              <span className="text-4xl font-bold text-white">
-                {tokensUsed.toLocaleString()}
-              </span>
-              <span className="text-gray-500 mb-1">
-                {isPro ? '/ ∞' : '/ 1,00,000'}
-              </span>
-            </div>
 
-            {/* Real progress bar */}
+            {/* Progress bar */}
             {!isPro ? (
               <>
-                <div className="w-full h-3 rounded-full mb-2" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                  <div className="h-3 rounded-full transition-all duration-700"
-                    style={{
-                      width: `${usagePercent}%`,
-                      background: usagePercent >= 80
-                        ? 'linear-gradient(90deg, #ef4444, #dc2626)'
-                        : 'linear-gradient(90deg, #7c3aed, #06b6d4)'
-                    }} />
+                <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.07)', borderRadius: '999px', overflow: 'hidden', marginBottom: '8px' }}>
+                  <div style={{
+                    height: '100%', borderRadius: '999px',
+                    width: `${usagePercent}%`,
+                    background: isWarning
+                      ? 'linear-gradient(90deg, #ef4444, #dc2626)'
+                      : 'linear-gradient(90deg, #7c3aed, #06b6d4)',
+                    transition: 'width 0.7s cubic-bezier(0.4,0,0.2,1)',
+                  }} />
                 </div>
-                <p className="text-xs" style={{ color: usagePercent >= 80 ? '#f87171' : 'rgba(255,255,255,0.3)' }}>
+                <p style={{ fontSize: '11px', color: isWarning ? '#fca5a5' : 'rgba(255,255,255,0.26)' }}>
                   {(FREE_LIMIT - tokensUsed).toLocaleString()} tokens remaining
                 </p>
               </>
             ) : (
-              <div className="w-full h-3 rounded-full mb-2" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <div className="h-3 rounded-full" style={{ width: '100%', background: 'linear-gradient(90deg, #7c3aed, #06b6d4)' }} />
+              <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.07)', borderRadius: '999px', overflow: 'hidden', marginBottom: '8px' }}>
+                <div style={{ height: '100%', width: '100%', borderRadius: '999px', background: 'linear-gradient(90deg, #7c3aed, #06b6d4)' }} />
               </div>
             )}
 
-            <p className="text-xs text-gray-500 mt-1">
-              {isPro ? '⭐ Pro Plan — Unlimited' : 'Free Plan — 1,00,000 limit'}
-            </p>
-
-            <div className="flex items-end gap-1 mt-4 h-12">
+            {/* Mini bar sparkline */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', height: '42px', marginTop: '22px' }}>
               {bars.map((h, i) => (
-                <div key={i} className="flex-1 rounded-sm"
-                  style={{
-                    height: `${h}%`,
-                    background: i === bars.length - 1
-                      ? 'linear-gradient(180deg, #7c3aed, #06b6d4)'
-                      : 'rgba(124,58,237,0.3)'
-                  }} />
+                <div key={i} style={{
+                  flex: 1, borderRadius: '3px 3px 2px 2px',
+                  height: `${h}%`,
+                  background: i === bars.length - 1
+                    ? 'linear-gradient(180deg, #7c3aed, #06b6d4)'
+                    : 'rgba(124,58,237,0.2)',
+                  transition: 'height 0.3s ease',
+                }} />
               ))}
             </div>
           </div>
 
-          {/* Documents Processed */}
-          <div className="rounded-2xl p-6 flex flex-col justify-between" style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)'
-          }}>
-            <span className="text-gray-300 font-medium">Documents Processed</span>
-            <div className="flex items-center justify-center flex-1 py-4">
-              <div className="relative w-28 h-28">
-                <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                  <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8"/>
+          {/* Documents card */}
+          <div style={card}>
+            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.26)', marginBottom: '20px' }}>
+              Documents Processed
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px 0 0' }}>
+              {/* Donut chart */}
+              <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+                <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7"/>
                   <circle cx="50" cy="50" r="40" fill="none"
-                    stroke="url(#grad)" strokeWidth="8"
+                    stroke="url(#docGrad)" strokeWidth="7"
                     strokeDasharray="251.2"
                     strokeDashoffset={251.2 - (Math.min((user?.documentsProcessed || 0) / 100, 1) * 251.2)}
                     strokeLinecap="round"/>
                   <defs>
-                    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient id="docGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor="#7c3aed"/>
                       <stop offset="100%" stopColor="#06b6d4"/>
                     </linearGradient>
                   </defs>
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-3xl font-bold text-white">
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '34px', fontWeight: 800, color: 'white', lineHeight: 1, letterSpacing: '-0.04em' }}>
                     {user?.documentsProcessed || 0}
                   </span>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '3px', fontWeight: 500 }}>files</span>
                 </div>
               </div>
+              <p style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(255,255,255,0.28)', textAlign: 'center' }}>
+                Total documents analyzed by AI
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Bottom Cards */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* ── Bottom row ──────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
-          {/* Real Usage Graph */}
-          <div className="rounded-2xl p-6" style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)'
-          }}>
-            <h3 className="text-white font-medium mb-1">Usage Overview (Last 7 Days)</h3>
-            <p className="text-gray-600 text-xs mb-3">Real token usage per day</p>
+          {/* Usage chart */}
+          <div style={card}>
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.26)', marginBottom: '4px' }}>
+                Token Usage
+              </p>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)' }}>Last 7 days</p>
+            </div>
 
             {stats.every(s => s.tokensUsed === 0) ? (
-              <div className="flex items-center justify-center h-40">
-                <p className="text-gray-600 text-sm">Start chatting to see your usage!</p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '155px', gap: '12px' }}>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.18)', textAlign: 'center' }}>
+                  Start chatting to see your usage
+                </p>
               </div>
             ) : (
-              <svg viewBox="0 0 420 170" className="w-full">
+              <svg viewBox="0 0 420 160" style={{ width: '100%' }}>
                 <defs>
-                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.5"/>
+                  <linearGradient id="areaGrad2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.38"/>
                     <stop offset="100%" stopColor="#7c3aed" stopOpacity="0"/>
                   </linearGradient>
+                  <linearGradient id="lineGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#7c3aed"/>
+                    <stop offset="100%" stopColor="#06b6d4"/>
+                  </linearGradient>
                 </defs>
-                {[20, 55, 90, 125].map(y => (
+
+                {/* Grid lines */}
+                {[20, 55, 90, 120].map(y => (
                   <line key={y} x1="10" y1={y} x2="410" y2={y}
-                    stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+                    stroke="rgba(255,255,255,0.04)" strokeWidth="1"/>
                 ))}
-                <path d={areaPath} fill="url(#areaGrad)"/>
-                <path d={linePath} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+
+                {/* Area fill */}
+                <path d={areaPath} fill="url(#areaGrad2)"/>
+
+                {/* Line */}
+                <path d={linePath} fill="none" stroke="url(#lineGrad2)" strokeWidth="2.5"
+                  strokeLinecap="round" strokeLinejoin="round"/>
+
+                {/* Data points */}
                 {graphPoints.map((p, i) => (
                   <g key={i}>
-                    <circle cx={p.x} cy={p.y} r="5" fill="#7c3aed" stroke="white" strokeWidth="2"/>
+                    <circle cx={p.x} cy={p.y} r="4.5" fill="#7c3aed" stroke="#08080f" strokeWidth="2.5"/>
                     {p.tokens > 0 && (
-                      <text x={p.x} y={p.y - 10} textAnchor="middle"
-                        fill="rgba(167,139,250,0.8)" fontSize="8">
-                        {p.tokens > 1000 ? `${(p.tokens/1000).toFixed(1)}k` : p.tokens}
+                      <text x={p.x} y={p.y - 11} textAnchor="middle"
+                        fill="rgba(196,181,253,0.7)" fontSize="8" fontFamily="Inter, sans-serif">
+                        {p.tokens > 1000 ? `${(p.tokens / 1000).toFixed(1)}k` : p.tokens}
                       </text>
                     )}
-                    <text x={p.x} y="148" textAnchor="middle"
-                      fill="rgba(255,255,255,0.4)" fontSize="9">
+                    <text x={p.x} y="152" textAnchor="middle"
+                      fill="rgba(255,255,255,0.28)" fontSize="9" fontFamily="Inter, sans-serif">
                       {p.label}
                     </text>
                   </g>
                 ))}
-                <circle cx="20" cy="160" r="4" fill="#7c3aed"/>
-                <text x="28" y="164" fill="rgba(255,255,255,0.4)" fontSize="9">Tokens used</text>
               </svg>
             )}
           </div>
 
-          {/* Account Info */}
-          <div className="rounded-2xl p-6" style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)'
-          }}>
-            <h3 className="text-white font-medium mb-4">Account Info</h3>
-            <div className="flex flex-col gap-3">
+          {/* Account info */}
+          <div style={card}>
+            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.26)', marginBottom: '16px' }}>
+              Account Info
+            </p>
 
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+              {/* User identity row */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '12px',
+                padding: '12px 14px', borderRadius: '11px',
+                background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.14)',
+                marginBottom: '4px',
+              }}>
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
+                  background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: '16px', color: 'white',
+                }}>
                   {user?.name?.[0]?.toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-white text-sm font-medium">{user?.name}</p>
-                  <p className="text-gray-500 text-xs">{user?.email}</p>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ color: 'white', fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user?.name}
+                  </p>
+                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user?.email}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg"
-                style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}>
-                <span className="text-gray-400 text-sm">Plan</span>
-                <span className="text-purple-400 text-sm font-medium">
-                  {isPro ? '⭐ Pro' : '🆓 Free'}
-                </span>
-              </div>
+              {/* Info rows */}
+              {[
+                { label: 'Plan', value: isPro ? '✦ Pro' : 'Free', color: isPro ? '#c4b5fd' : 'rgba(255,255,255,0.4)' },
+                { label: 'Tokens Remaining', value: isPro ? '∞ Unlimited' : Math.max(FREE_LIMIT - tokensUsed, 0).toLocaleString() },
+                { label: 'Documents Processed', value: user?.documentsProcessed || 0 },
+                { label: 'Active Days', value: `${stats.filter(s => s.tokensUsed > 0).length} / 7` },
+              ].map((row, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '9px 13px', borderRadius: '9px',
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)',
+                }}>
+                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.38)' }}>{row.label}</span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: row.color || 'white' }}>{row.value}</span>
+                </div>
+              ))}
 
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span className="text-gray-400 text-sm">Tokens Remaining</span>
-                <span className="text-white text-sm font-medium">
-                  {isPro ? '∞ Unlimited' : Math.max(FREE_LIMIT - tokensUsed, 0).toLocaleString()}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span className="text-gray-400 text-sm">Documents Processed</span>
-                <span className="text-white text-sm font-medium">{user?.documentsProcessed || 0}</span>
-              </div>
-
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <span className="text-gray-400 text-sm">Active Days</span>
-                <span className="text-white text-sm font-medium">
-                  {stats.filter(s => s.tokensUsed > 0).length} / 7
-                </span>
-              </div>
-
+              {/* Upgrade CTA */}
               {!isPro && (
                 <button
                   onClick={() => setActivePage('Pricing')}
-                  className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
-                  ⭐ Upgrade to Pro — ₹499/mo
+                  style={{
+                    width: '100%', padding: '11px', marginTop: '4px', borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white',
+                    border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+                    boxShadow: '0 2px 16px rgba(124,58,237,0.32)', transition: 'all 0.15s ease',
+                    fontFamily: 'Inter, sans-serif',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
+                >
+                  Upgrade to Pro — ₹499/mo →
                 </button>
               )}
 
-              <button onClick={onLogout}
-                className="w-full py-2 rounded-lg text-sm font-medium transition-all hover:opacity-80"
-                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgba(239,68,68,0.8)' }}>
-                🚪 Logout
+              {/* Logout */}
+              <button
+                onClick={onLogout}
+                style={{
+                  width: '100%', padding: '10px', borderRadius: '10px',
+                  background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.15)',
+                  color: 'rgba(248,113,113,0.72)', cursor: 'pointer', fontSize: '13px', fontWeight: 500,
+                  transition: 'all 0.15s ease', fontFamily: 'Inter, sans-serif',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.13)'; e.currentTarget.style.color = '#f87171' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.07)'; e.currentTarget.style.color = 'rgba(248,113,113,0.72)' }}
+              >
+                Sign Out
               </button>
             </div>
           </div>
+
         </div>
       </div>
     </div>

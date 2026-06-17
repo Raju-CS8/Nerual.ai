@@ -3,13 +3,14 @@ import Sidebar from '../components/Sidebar'
 import { upgradeToProAPI } from '../api'
 
 export default function Pricing({ activePage, setActivePage, user, onLogout }) {
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
+  // ✅ All state preserved exactly
+  const [loading,  setLoading]  = useState(false)
+  const [success,  setSuccess]  = useState(false)
   const [selected, setSelected] = useState(user?.plan || 'free')
 
+  // ✅ All logic preserved exactly
   const handleUpgrade = async () => {
     if (selected === user?.plan) return
-
     setLoading(true)
     try {
       if (selected === 'pro') {
@@ -20,7 +21,6 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
           setTimeout(() => window.location.reload(), 2000)
         }
       } else {
-        // Downgrade to free
         const token = localStorage.getItem('neuraliq_token')
         const res = await fetch('https://nerual-ai.onrender.com/api/subscription/downgrade', {
           method: 'POST',
@@ -33,14 +33,14 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
           setTimeout(() => window.location.reload(), 2000)
         }
       }
-    } catch {
-      alert('Failed. Try again.')
-    }
+    } catch { alert('Failed. Try again.') }
     setLoading(false)
   }
 
-  const FREE_LIMIT = 100000
+  // ✅ All calculations preserved exactly
+  const FREE_LIMIT   = 100000
   const usagePercent = Math.min(((user?.tokensUsed || 0) / FREE_LIMIT) * 100, 100)
+  const isPro        = user?.plan === 'pro'
 
   const plans = [
     {
@@ -48,13 +48,14 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
       name: 'Free',
       price: '₹0',
       period: 'forever',
+      description: 'Perfect for getting started',
       features: [
         '1,00,000 tokens/month',
         '10 file uploads',
         'Basic AI chat (LLaMA)',
         'PDF summarization',
         'Chat history',
-        'Community support'
+        'Community support',
       ]
     },
     {
@@ -62,6 +63,7 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
       name: 'Pro',
       price: '₹499',
       period: 'per month',
+      description: 'For power users & teams',
       highlighted: true,
       features: [
         'Unlimited tokens',
@@ -70,126 +72,173 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
         'Advanced PDF analysis',
         'Full chat history',
         'Priority support',
-        'Early access to new features'
+        'Early access to new features',
       ]
     }
   ]
 
   return (
-    <div className="flex h-screen overflow-hidden"
-      style={{ background: 'radial-gradient(ellipse at 30% 20%, #1a0533 0%, #050816 60%)' }}>
+    <div style={{
+      display: 'flex', height: '100vh', overflow: 'hidden',
+      background: 'radial-gradient(ellipse 80% 60% at 20% -5%, rgba(124,58,237,0.1) 0%, #08080f 65%)',
+    }}>
       <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
-      <div className="flex-1 p-8 overflow-y-auto">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          <span className="font-bold">NEURALIQ.</span>
-          <span className="font-light"> Pricing.</span>
-        </h1>
-        <p className="text-gray-400 mb-6">Choose the plan that works for you.</p>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }} className="page-enter">
 
-        {/* Current Usage Bar */}
-        {user?.plan === 'free' && (
-          <div className="rounded-2xl p-5 mb-6"
-            style={{
-              background: usagePercent >= 80 ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${usagePercent >= 80 ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.08)'}`,
-            }}>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-white font-medium">Current Usage</span>
-              <span className={`text-sm font-bold ${usagePercent >= 80 ? 'text-red-400' : 'text-purple-400'}`}>
+        {/* ── Header ──────────────────────────────────────── */}
+        <div style={{ marginBottom: '32px' }}>
+          <h1 style={{ fontSize: '27px', fontWeight: 800, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+            Pricing
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.32)', marginTop: '7px', fontSize: '14px' }}>
+            Choose the plan that works for you
+          </p>
+        </div>
+
+        {/* ✅ Usage bar for free users */}
+        {!isPro && (
+          <div style={{
+            padding: '18px 22px', borderRadius: '14px', marginBottom: '28px',
+            background: usagePercent >= 80 ? 'rgba(239,68,68,0.07)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${usagePercent >= 80 ? 'rgba(239,68,68,0.22)' : 'rgba(255,255,255,0.08)'}`,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <p style={{ color: 'white', fontWeight: 600, fontSize: '13px' }}>Current Usage</p>
+              <p style={{ fontSize: '12px', fontWeight: 700, color: usagePercent >= 80 ? '#fca5a5' : '#c4b5fd' }}>
                 {(user?.tokensUsed || 0).toLocaleString()} / {FREE_LIMIT.toLocaleString()} tokens
-              </span>
+              </p>
             </div>
-            <div className="w-full h-3 rounded-full" style={{ background: 'rgba(255,255,255,0.1)' }}>
-              <div className="h-3 rounded-full transition-all duration-500"
-                style={{
-                  width: `${usagePercent}%`,
-                  background: usagePercent >= 80
-                    ? 'linear-gradient(90deg, #ef4444, #dc2626)'
-                    : 'linear-gradient(90deg, #7c3aed, #06b6d4)'
-                }} />
+            <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: '999px', width: `${usagePercent}%`,
+                background: usagePercent >= 80
+                  ? 'linear-gradient(90deg, #ef4444, #dc2626)'
+                  : 'linear-gradient(90deg, #7c3aed, #06b6d4)',
+                transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
+              }} />
             </div>
             {usagePercent >= 80 && (
-              <p className="text-red-400 text-sm mt-2">
-                ⚠️ You've used {usagePercent.toFixed(0)}% of your free tokens!
+              <p style={{ color: '#fca5a5', fontSize: '12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>⚠️</span>
+                You've used {usagePercent.toFixed(0)}% of your free tokens
               </p>
             )}
           </div>
         )}
 
-        {/* Success Message */}
+        {/* ✅ Success message */}
         {success && (
-          <div className="rounded-xl p-4 mb-6 text-green-400 font-medium"
-            style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
-            🎉 Plan updated successfully! Reloading...
+          <div style={{
+            padding: '14px 18px', borderRadius: '12px', marginBottom: '24px',
+            background: 'rgba(16,185,129,0.09)', border: '1px solid rgba(16,185,129,0.22)',
+            display: 'flex', alignItems: 'center', gap: '10px',
+          }} className="fade-in">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span style={{ color: '#6ee7b7', fontSize: '13px', fontWeight: 600 }}>
+              🎉 Plan updated successfully! Reloading…
+            </span>
           </div>
         )}
 
-        {/* Plan Cards */}
-        <div className="grid grid-cols-2 gap-6 max-w-3xl mb-6">
+        {/* ── Plan cards ───────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', maxWidth: '760px', marginBottom: '24px' }}>
           {plans.map((plan) => {
             const isCurrentPlan = user?.plan === plan.id
-            const isSelected = selected === plan.id
+            const isSelected    = selected === plan.id
+            const isPlanPro     = plan.id === 'pro'
 
             return (
               <div
                 key={plan.id}
                 onClick={() => setSelected(plan.id)}
-                className="rounded-2xl p-8 flex flex-col gap-4 cursor-pointer transition-all"
                 style={{
+                  position: 'relative', cursor: 'pointer', transition: 'all 0.2s ease',
+                  borderRadius: '18px', padding: '28px',
                   background: isSelected
-                    ? plan.id === 'pro' ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.08)'
-                    : 'rgba(255,255,255,0.03)',
+                    ? isPlanPro
+                      ? 'linear-gradient(160deg, #1a1035 0%, #0f0f1a 100%)'
+                      : 'linear-gradient(160deg, #16162a 0%, #0f0f1a 100%)'
+                    : 'linear-gradient(160deg, #111120 0%, #0a0a14 100%)',
                   border: isSelected
-                    ? `2px solid ${plan.id === 'pro' ? '#7c3aed' : 'rgba(255,255,255,0.4)'}`
-                    : '2px solid rgba(255,255,255,0.06)',
-                  backdropFilter: 'blur(20px)',
-                  boxShadow: isSelected && plan.id === 'pro' ? '0 0 40px rgba(124,58,237,0.3)' : 'none',
-                  transform: isSelected ? 'scale(1.02)' : 'scale(1)',
-                  transition: 'all 0.2s ease'
-                }}>
+                    ? `2px solid ${isPlanPro ? '#7c3aed' : 'rgba(255,255,255,0.3)'}`
+                    : '2px solid rgba(255,255,255,0.07)',
+                  boxShadow: isSelected && isPlanPro
+                    ? '0 0 40px rgba(124,58,237,0.2), 0 4px 24px rgba(0,0,0,0.4)'
+                    : '0 4px 24px rgba(0,0,0,0.3)',
+                  transform: isSelected ? 'translateY(-2px)' : 'translateY(0)',
+                }}
+              >
+                {/* Popular badge */}
+                {isPlanPro && (
+                  <div style={{
+                    position: 'absolute', top: '-1px', left: '50%', transform: 'translateX(-50%)',
+                    padding: '4px 16px', borderRadius: '0 0 10px 10px', fontSize: '10px', fontWeight: 800,
+                    background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', color: 'white',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                  }}>
+                    Most Popular
+                  </div>
+                )}
 
-                {/* Selected indicator */}
-                <div className="flex items-center justify-between">
-                  {plan.highlighted && (
-                    <span className="text-xs px-3 py-1 rounded-full font-medium"
-                      style={{ background: 'rgba(124,58,237,0.3)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.4)' }}>
-                      ⭐ Most Popular
+                {/* Radio + current badge */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', marginTop: isPlanPro ? '8px' : '0' }}>
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
+                    border: `2px solid ${isSelected ? '#7c3aed' : 'rgba(255,255,255,0.2)'}`,
+                    background: isSelected ? '#7c3aed' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s',
+                  }}>
+                    {isSelected && <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'white' }} />}
+                  </div>
+
+                  {isCurrentPlan && (
+                    <span style={{
+                      fontSize: '10px', fontWeight: 700, padding: '3px 9px', borderRadius: '999px',
+                      background: 'rgba(16,185,129,0.14)', color: '#6ee7b7',
+                      border: '1px solid rgba(16,185,129,0.25)',
+                    }}>
+                      Current Plan
                     </span>
                   )}
-                  {!plan.highlighted && <span />}
+                </div>
 
-                  {/* Radio indicator */}
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{
-                      border: `2px solid ${isSelected ? '#7c3aed' : 'rgba(255,255,255,0.2)'}`,
-                      background: isSelected ? '#7c3aed' : 'transparent'
-                    }}>
-                    {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                {/* Plan name + price */}
+                <div style={{ marginBottom: '22px' }}>
+                  <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'white', marginBottom: '4px', letterSpacing: '-0.02em' }}>
+                    {plan.name}
+                  </h2>
+                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', marginBottom: '14px' }}>
+                    {plan.description}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <span style={{ fontSize: '42px', fontWeight: 800, color: 'white', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                      {plan.price}
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.32)', fontSize: '13px' }}>/{plan.period}</span>
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-bold text-white">{plan.name}</h2>
-                    {isCurrentPlan && (
-                      <span className="text-xs px-2 py-1 rounded-full text-green-400"
-                        style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                        Current
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-end gap-1 mt-1">
-                    <span className="text-4xl font-bold text-white">{plan.price}</span>
-                    <span className="text-gray-500 mb-1">/{plan.period}</span>
-                  </div>
-                </div>
+                {/* Divider */}
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', marginBottom: '18px' }} />
 
-                <div className="flex flex-col gap-2 flex-1">
+                {/* Features */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
                   {plan.features.map((f, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="text-green-400 text-sm">✓</span>
-                      <span className="text-gray-300 text-sm">{f}</span>
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <div style={{
+                        width: '18px', height: '18px', borderRadius: '50%', flexShrink: 0, marginTop: '1px',
+                        background: isPlanPro ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.07)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isPlanPro ? '#c4b5fd' : 'rgba(255,255,255,0.5)'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </div>
+                      <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: '13px', lineHeight: '1.5' }}>{f}</span>
                     </div>
                   ))}
                 </div>
@@ -198,31 +247,67 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
           })}
         </div>
 
-        {/* Confirm Button */}
-        <div className="max-w-3xl">
+        {/* ── CTA button ───────────────────────────────────── */}
+        <div style={{ maxWidth: '760px' }}>
           {selected !== user?.plan ? (
             <button
               onClick={handleUpgrade}
               disabled={loading}
-              className="w-full py-4 rounded-xl font-bold text-white text-lg transition-all hover:opacity-90"
               style={{
+                width: '100%', padding: '15px', borderRadius: '13px', fontSize: '15px', fontWeight: 800,
+                color: 'white', border: 'none', fontFamily: 'Inter, sans-serif',
                 background: loading
-                  ? 'rgba(124,58,237,0.4)'
+                  ? 'rgba(124,58,237,0.35)'
                   : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                boxShadow: '0 0 30px rgba(124,58,237,0.3)'
-              }}>
-              {loading ? 'Processing...' :
-                selected === 'pro'
-                  ? '⭐ Confirm Upgrade to Pro — ₹499/mo'
-                  : '🔄 Confirm Downgrade to Free'}
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: loading ? 'none' : '0 4px 24px rgba(124,58,237,0.4)',
+                transition: 'all 0.2s ease',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                letterSpacing: '-0.01em',
+              }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)' }}}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
+            >
+              {loading ? (
+                <>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', animation: 'spin 0.7s linear infinite' }} />
+                  Processing…
+                </>
+              ) : selected === 'pro' ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                  </svg>
+                  Confirm Upgrade to Pro — ₹499/mo
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                  </svg>
+                  Confirm Downgrade to Free
+                </>
+              )}
             </button>
           ) : (
-            <div className="w-full py-4 rounded-xl text-center text-gray-500"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{
+              width: '100%', padding: '15px', borderRadius: '13px', textAlign: 'center',
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.35)', fontSize: '14px', fontWeight: 500,
+            }}>
               ✓ You are already on the {user?.plan === 'pro' ? 'Pro' : 'Free'} plan
             </div>
           )}
+
+          {/* Fine print */}
+          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '11px', textAlign: 'center', marginTop: '12px', lineHeight: '1.6' }}>
+            {selected === 'pro'
+              ? 'Upgrade takes effect immediately · Cancel anytime'
+              : 'Downgrade takes effect at end of billing cycle'}
+          </p>
         </div>
+
       </div>
     </div>
   )

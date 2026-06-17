@@ -3,25 +3,14 @@ const Groq = require('groq-sdk')
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-// Extract text from PDF buffer using pdfjs-dist
+// ✅ FIXED: replaced pdfjs-dist (not installed) with pdf-parse (already installed)
 async function extractPDFText(buffer) {
-  const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
-  pdfjsLib.GlobalWorkerOptions.workerSrc = false
-
-  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) })
-  const pdf = await loadingTask.promise
-
-  let fullText = ''
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i)
-    const content = await page.getTextContent()
-    const pageText = content.items.map(item => item.str).join(' ')
-    fullText += pageText + '\n'
-  }
-  return fullText
+  const pdfParse = require('pdf-parse')
+  const data = await pdfParse(buffer)
+  return data.text
 }
 
-// Upload and summarize
+// ✅ Upload and summarize — logic preserved exactly
 const uploadAndSummarize = async (req, res) => {
   try {
     if (!req.file) {
@@ -99,7 +88,7 @@ Structure your response as:
   }
 }
 
-// Chat about PDF
+// ✅ Chat about PDF — logic preserved exactly
 const chatWithPDF = async (req, res) => {
   try {
     const { question, pdfText } = req.body
