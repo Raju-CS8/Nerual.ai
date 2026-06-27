@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,28 +6,23 @@
 
 /* ── Design Tokens ─────────────────────────────────────────── */
 :root {
-  --bg-base:        #08080f;
-  --bg-surface:     #0f0f1a;
-  --bg-elevated:    #141424;
-  --bg-card:        #16162a;
+  --bg-base:        #0B1510;
+  --bg-surface:     #0f1e14;
+  --bg-elevated:    #141f18;
+  --bg-card:        rgba(20,35,25,0.82);
 
-  --border-subtle:  rgba(255,255,255,0.06);
-  --border-muted:   rgba(255,255,255,0.09);
-  --border-accent:  rgba(124,58,237,0.35);
+  --gold:           #C5A059;
+  --gold-dim:       #8B6914;
+  --copper:         #B8860B;
 
-  --violet:         #7c3aed;
-  --violet-bright:  #9f6cf7;
-  --cyan:           #06b6d4;
+  --border-gold:    rgba(197,160,89,0.35);
+  --border-subtle:  rgba(197,160,89,0.12);
 
-  --text-primary:   #f0eeff;
-  --text-secondary: #9490b5;
-  --text-muted:     #4d4870;
+  --text-gold:      #C5A059;
+  --text-muted:     rgba(197,160,89,0.45);
 
-  --gradient-main:  linear-gradient(135deg, #7c3aed, #06b6d4);
-  --gradient-card:  linear-gradient(160deg, #16162a 0%, #0f0f1a 100%);
-
-  --shadow-card:    0 4px 24px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.3);
-  --shadow-glow:    0 0 32px rgba(124,58,237,0.2);
+  --shadow-card:    0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(197,160,89,0.12);
+  --shadow-glow:    0 0 24px rgba(197,160,89,0.25);
 }
 
 /* ── Reset ─────────────────────────────────────────────────── */
@@ -36,7 +31,7 @@ html { scroll-behavior: smooth; }
 
 body {
   background-color: var(--bg-base);
-  color: var(--text-primary);
+  color: var(--text-gold);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
   line-height: 1.6;
@@ -47,8 +42,8 @@ body {
 /* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar               { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track         { background: transparent; }
-::-webkit-scrollbar-thumb         { background: rgba(124,58,237,0.3); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover   { background: rgba(124,58,237,0.55); }
+::-webkit-scrollbar-thumb         { background: rgba(197,160,89,0.25); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover   { background: rgba(197,160,89,0.5); }
 
 /* ── Animations ────────────────────────────────────────────── */
 @keyframes fadeUp {
@@ -70,18 +65,34 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+@keyframes gearSpin {
+  to { transform: rotate(360deg); }
+}
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(124,58,237,0.25); }
-  50%       { box-shadow: 0 0 28px rgba(124,58,237,0.55); }
+  0%, 100% { box-shadow: 0 0 12px rgba(197,160,89,0.2); }
+  50%       { box-shadow: 0 0 28px rgba(197,160,89,0.55); }
+}
+@keyframes goldPulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
 }
 
 /* ── Utility ───────────────────────────────────────────────── */
 .page-enter      { animation: fadeUp 0.28s ease-out both; }
 .slide-in-left   { animation: slideInLeft 0.25s cubic-bezier(0.16,1,0.3,1) both; }
 .fade-in         { animation: fadeIn 0.2s ease-out both; }
+.gear-spin       { animation: gearSpin 8s linear infinite; }
+.gold-pulse      { animation: goldPulse 2s ease-in-out infinite; }
 
 /* ── Selection ─────────────────────────────────────────────── */
-::selection { background: rgba(124,58,237,0.35); color: white; }
+::selection { background: rgba(197,160,89,0.3); color: #fff; }
 
 /* ── Code font ─────────────────────────────────────────────── */
 code, pre { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+/* ── Steampunk card hover glow ─────────────────────────────── */
+.steam-card:hover {
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 20px rgba(197,160,89,0.12), inset 0 1px 0 rgba(197,160,89,0.15);
+  border-color: rgba(197,160,89,0.45) !important;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
