@@ -71,15 +71,19 @@ Structure your response as:
     })
 
     const summary = completion.choices[0]?.message?.content || 'Could not generate summary'
+    const tokensUsed = completion.usage?.total_tokens || 0
 
     const User = require('../models/User')
-    await User.findByIdAndUpdate(req.user.id, { $inc: { documentsProcessed: 1 } })
+    await User.findByIdAndUpdate(req.user.id, {
+      $inc: { documentsProcessed: 1, tokensUsed: tokensUsed, monthlyTokensUsed: tokensUsed },
+    })
 
     res.json({
       success: true,
       fileName: req.file.originalname,
       summary,
-      extractedText: truncatedText
+      extractedText: truncatedText,
+      tokensUsed,
     })
 
   } catch (error) {
@@ -121,8 +125,14 @@ ${pdfText.slice(0, 6000)}`
     })
 
     const reply = completion.choices[0]?.message?.content || 'No response'
+    const tokensUsed = completion.usage?.total_tokens || 0
 
-    res.json({ success: true, reply })
+    const User = require('../models/User')
+    await User.findByIdAndUpdate(req.user.id, {
+      $inc: { tokensUsed: tokensUsed, monthlyTokensUsed: tokensUsed },
+    })
+
+    res.json({ success: true, reply, tokensUsed })
 
   } catch (error) {
     console.error('PDF chat error:', error.message)

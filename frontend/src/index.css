@@ -4,25 +4,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Design Tokens ─────────────────────────────────────────── */
+/* ── Design Tokens ── Aetherial Deep Space ─────────────────── */
 :root {
-  --bg-base:        #0B1510;
-  --bg-surface:     #0f1e14;
-  --bg-elevated:    #141f18;
-  --bg-card:        rgba(20,35,25,0.82);
+  --bg-base:        #13111C;
+  --bg-center:      #1A1725;
+  --bg-surface:     #191621;
+  --bg-elevated:    #1E1B26;
+  --bg-card-top:    #262131;
+  --bg-card:        #1E1B26;
 
-  --gold:           #C5A059;
-  --gold-dim:       #8B6914;
-  --copper:         #B8860B;
+  --gold:           #FBBF24;
+  --gold-dim:       #D4AF37;
+  --copper:         #D4AF37;
 
-  --border-gold:    rgba(197,160,89,0.35);
-  --border-subtle:  rgba(197,160,89,0.12);
+  --text-main:      #F3F4F6;
+  --text-muted:     rgba(243,244,246,0.5);
+  --text-dim:       rgba(243,244,246,0.35);
 
-  --text-gold:      #C5A059;
-  --text-muted:     rgba(197,160,89,0.45);
+  --border-gold:    rgba(214,175,55,0.2);
+  --border-subtle:  rgba(214,175,55,0.1);
 
-  --shadow-card:    0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(197,160,89,0.12);
-  --shadow-glow:    0 0 24px rgba(197,160,89,0.25);
+  --shadow-card:    0 4px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(251,191,36,0.06);
+  --shadow-glow:    0 0 15px rgba(212,175,55,0.25);
+
+  --crimson:        #3E262A;
 }
 
 /* ── Reset ─────────────────────────────────────────────────── */
@@ -30,9 +35,10 @@
 html { scroll-behavior: smooth; }
 
 body {
-  background-color: var(--bg-base);
-  color: var(--text-gold);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at center, #1A1725 0%, #13111C 100%);
+  background-attachment: fixed;
+  color: #F3F4F6;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -42,8 +48,8 @@ body {
 /* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar               { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track         { background: transparent; }
-::-webkit-scrollbar-thumb         { background: rgba(197,160,89,0.25); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover   { background: rgba(197,160,89,0.5); }
+::-webkit-scrollbar-thumb         { background: rgba(214,175,55,0.2); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover   { background: rgba(214,175,55,0.4); }
 
 /* ── Animations ────────────────────────────────────────────── */
 @keyframes fadeUp {
@@ -62,15 +68,11 @@ body {
   0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
   40%           { transform: scale(1);   opacity: 1; }
 }
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes gearSpin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin      { to { transform: rotate(360deg); } }
+@keyframes gearSpin  { to { transform: rotate(360deg); } }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px rgba(197,160,89,0.2); }
-  50%       { box-shadow: 0 0 28px rgba(197,160,89,0.55); }
+  0%, 100% { box-shadow: 0 0 12px rgba(212,175,55,0.2); }
+  50%       { box-shadow: 0 0 28px rgba(212,175,55,0.5); }
 }
 @keyframes goldPulse {
   0%, 100% { opacity: 0.6; }
@@ -78,21 +80,32 @@ body {
 }
 
 /* ── Utility ───────────────────────────────────────────────── */
-.page-enter      { animation: fadeUp 0.28s ease-out both; }
-.slide-in-left   { animation: slideInLeft 0.25s cubic-bezier(0.16,1,0.3,1) both; }
-.fade-in         { animation: fadeIn 0.2s ease-out both; }
-.gear-spin       { animation: gearSpin 8s linear infinite; }
-.gold-pulse      { animation: goldPulse 2s ease-in-out infinite; }
+.page-enter    { animation: fadeUp 0.28s ease-out both; }
+.slide-in-left { animation: slideInLeft 0.25s cubic-bezier(0.16,1,0.3,1) both; }
+.fade-in       { animation: fadeIn 0.2s ease-out both; }
+.gear-spin     { animation: gearSpin 8s linear infinite; }
+.gold-pulse    { animation: goldPulse 2s ease-in-out infinite; }
 
 /* ── Selection ─────────────────────────────────────────────── */
-::selection { background: rgba(197,160,89,0.3); color: #fff; }
+::selection { background: rgba(212,175,55,0.25); color: #fff; }
 
 /* ── Code font ─────────────────────────────────────────────── */
-code, pre { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+code, pre { font-family: "JetBrains Mono", "Fira Code", monospace; }
 
-/* ── Steampunk card hover glow ─────────────────────────────── */
-.steam-card:hover {
-  box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 20px rgba(197,160,89,0.12), inset 0 1px 0 rgba(197,160,89,0.15);
-  border-color: rgba(197,160,89,0.45) !important;
+/* ── Card ──────────────────────────────────────────────────── */
+.card {
+  background: linear-gradient(180deg, #262131 0%, #1E1B26 100%);
+  border: 1px solid rgba(214,175,55,0.15);
+  border-radius: 14px;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(251,191,36,0.06);
+}
+.card:hover {
+  border-color: rgba(214,175,55,0.25);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 15px rgba(212,175,55,0.08);
   transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Gold glow drop-shadow for SVG charts ──────────────────── */
+.gold-glow-filter {
+  filter: drop-shadow(0 0 8px rgba(212,175,55,0.3));
 }

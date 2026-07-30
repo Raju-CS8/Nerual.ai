@@ -2,6 +2,8 @@ const Groq = require('groq-sdk')
 const User = require('../models/User')
 const Chat = require('../models/Chat')
 const Usage = require('../models/Usage')
+const planService = require('../services/planService')
+const { nextResetDate } = require('../middleware/checkUsageLimit')
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -15,12 +17,9 @@ const sendMessage = async (req, res) => {
       return res.status(400).json({ error: 'Message is required' })
     }
 
-    if (req.user.plan === 'free' && req.user.tokensUsed >= 100000) {
-      return res.status(403).json({
-        error: 'Token limit reached! Please upgrade to Pro to continue chatting.',
-        limitReached: true
-      })
-    }
+    // Usage-limit check (monthly reset + plan cap) now happens in
+    // middleware/checkUsageLimit.js, wired onto this route in
+    // routes/chatRoutes.js — no longer duplicated here.
 
     const model = 'llama-3.3-70b-versatile'
 
@@ -51,7 +50,7 @@ const sendMessage = async (req, res) => {
     const reply = completion.choices[0]?.message?.content || 'No response'
     const tokensUsed = completion.usage?.total_tokens || 0
 
-    await User.findByIdAndUpdate(req.user.id, { $inc: { tokensUsed: tokensUsed } })
+    await User.findByIdAndUpdate(req.user.id, { $inc: { tokensUsed: tokensUsed, monthlyTokensUsed: tokensUsed } })
 
     await Usage.findOneAndUpdate(
       { userId: req.user.id, date: getToday() },
@@ -169,4 +168,25 @@ const deleteChat = async (req, res) => {
   }
 }
 
-module.exports = { sendMessage, getChats, getChat, getUsageStats, renameChat, deleteChat }
+// ✅ Current-month usage vs. this user's plan limit — DB-driven, no
+// hardcoded 100000 on the frontend anymore.
+const getUsageSummary = async (req, res) => {
+  try {
+    const plan = await planService.getPlanById(req.user.plan)
+    const tokenLimit = plan?.tokenLimit ?? null // null = unlimited
+
+    res.json({
+      success: true,
+      plan: req.user.plan,
+      monthlyTokensUsed: req.user.monthlyTokensUsed,
+      tokenLimit,
+      remaining: tokenLimit == null ? null : Math.max(tokenLimit - req.user.monthlyTokensUsed, 0),
+      percentUsed: tokenLimit == null ? 0 : Math.min((req.user.monthlyTokensUsed / tokenLimit) * 100, 100),
+      resetsOn: nextResetDate(req.user.usageResetAt),
+    })
+  } catch (error) {
+    res.status(500).json({ error: 'Could not fetch usage summary' })
+  }
+}
+
+module.exports = { sendMessage, getChats, getChat, getUsageStats, getUsageSummary, renameChat, deleteChat }

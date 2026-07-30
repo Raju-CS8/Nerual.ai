@@ -35,9 +35,31 @@ const userSchema = new mongoose.Schema({
     enum: ['free', 'pro'],
     default: 'free',
   },
+  // Site-wide admin flag — gates the Admin Billing Dashboard only.
+  // Unrelated to the workspace-level collaborator 'role' field used in
+  // Workspace.js/roleMiddleware.js, which is a per-workspace concept.
+  // Never exposed on any signup/update endpoint — only settable via
+  // scripts/makeAdmin.js (a CLI script, not an API route) to keep it
+  // out of reach of any client request.
+  isAdmin: {
+    type: Boolean,
+    default: false,
+  },
   tokensUsed: {
     type: Number,
     default: 0,
+  },
+  // Resets to 0 every calendar month (see middleware/checkUsageLimit.js) —
+  // this is what plan limits are actually enforced against. tokensUsed
+  // above stays a lifetime running total and is left untouched, since
+  // existing pages already read it for historical display.
+  monthlyTokensUsed: {
+    type: Number,
+    default: 0,
+  },
+  usageResetAt: {
+    type: Date,
+    default: Date.now,
   },
   documentsProcessed: {
     type: Number,

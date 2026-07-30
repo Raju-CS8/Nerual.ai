@@ -5,6 +5,7 @@ const multer = require('multer')
 const path = require('path')
 const { uploadAndSummarize, chatWithPDF } = require('../controllers/fileController')
 const { protect } = require('../middleware/authMiddleware')
+const { checkUsageLimit } = require('../middleware/checkUsageLimit')
 
 // ✅ Use memory storage — no disk needed, works on Render
 const storage = multer.memoryStorage()
@@ -17,7 +18,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024 } })
 
-router.post('/upload', protect, upload.single('file'), uploadAndSummarize)
-router.post('/chat', protect, chatWithPDF)
+router.post('/upload', protect, checkUsageLimit, upload.single('file'), uploadAndSummarize)
+router.post('/chat', protect, checkUsageLimit, chatWithPDF)
 
 module.exports = router

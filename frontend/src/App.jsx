@@ -8,6 +8,7 @@ import Pricing from './pages/Pricing'
 import Settings from './pages/Settings'
 import Workspace from './pages/Workspace'
 import Team from './pages/Team'
+import Admin from './pages/Admin'
 
 function App() {
   // ✅ Reads saved page from localStorage on first load
@@ -116,6 +117,7 @@ function App() {
     Settings:  <Settings {...props} />,
     Workspace: <Workspace {...props} />,
     Team:      <Team {...props} />,
+    Admin:     <Admin {...props} />,
     Dashboard: <Dashboard {...props} />
   }
 

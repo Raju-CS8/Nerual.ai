@@ -15,6 +15,7 @@ const formatUser = (user) => ({
   email: user.email,
   avatar: user.avatar || null,
   plan: user.plan,
+  isAdmin: user.isAdmin || false,
   tokensUsed: user.tokensUsed,
   documentsProcessed: user.documentsProcessed,
 })

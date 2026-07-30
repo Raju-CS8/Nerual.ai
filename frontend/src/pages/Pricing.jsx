@@ -1,81 +1,182 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
-import { upgradeToProAPI } from '../api'
+import {
+  getPlansAPI,
+  createOrderAPI,
+  verifyPaymentAPI,
+  downgradeToFreeAPI,
+  getTransactionsAPI,
+  downloadReceiptAPI,
+  getUsageSummaryAPI,
+} from '../api'
 
 export default function Pricing({ activePage, setActivePage, user, onLogout }) {
-  // ✅ All state preserved exactly
-  const [loading,  setLoading]  = useState(false)
-  const [success,  setSuccess]  = useState(false)
-  const [selected, setSelected] = useState(user?.plan || 'free')
+  const [loading,      setLoading]      = useState(false)
+  const [success,      setSuccess]      = useState(false)
+  const [selected,     setSelected]     = useState(user?.plan || 'free')
+  const [errorMsg,     setErrorMsg]     = useState('')
+  const [transactions, setTransactions] = useState([])
+  const [paidTxnId,    setPaidTxnId]    = useState(null)
+  const [plans,        setPlans]        = useState([])
+  const [plansLoading, setPlansLoading] = useState(true)
+  const [usageSummary, setUsageSummary] = useState(null)
 
-  // ✅ All logic preserved exactly
+  const isPro = user?.plan === 'pro'
+  const proPlan = plans.find(p => p.planId === 'pro')
+
+  // Pricing is DB-driven (see backend models/Plan.js) — fetched here
+  // instead of hardcoded, so a price change never needs a redeploy.
+  useEffect(() => {
+    getPlansAPI()
+      .then(data => { if (data?.success) setPlans(data.plans) })
+      .catch(() => {})
+      .finally(() => setPlansLoading(false))
+  }, [])
+
+  // Current-month usage vs. this user's plan limit — DB-driven, replaces
+  // the old hardcoded FREE_LIMIT/lifetime-tokensUsed usage bar below.
+  useEffect(() => {
+    getUsageSummaryAPI()
+      .then(data => { if (data?.success) setUsageSummary(data) })
+      .catch(() => {})
+  }, [])
+
+  // Billing history — shown once the user has at least one successful payment
+  useEffect(() => {
+    getTransactionsAPI()
+      .then(data => { if (data?.success) setTransactions(data.transactions) })
+      .catch(() => {})
+  }, [])
+
+  // ── Real Razorpay Checkout flow ─────────────────────────────────
   const handleUpgrade = async () => {
-    if (selected === user?.plan) return
+    setErrorMsg('')
     setLoading(true)
     try {
-      if (selected === 'pro') {
-        const data = await upgradeToProAPI()
-        if (data.success) {
-          localStorage.setItem('neuraliq_user', JSON.stringify(data.user))
-          setSuccess(true)
-          setTimeout(() => window.location.reload(), 2000)
-        }
-      } else {
-        const token = localStorage.getItem('neuraliq_token')
-        const res = await fetch('https://nerual-ai.onrender.com/api/subscription/downgrade', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        const data = await res.json()
-        if (data.success) {
-          localStorage.setItem('neuraliq_user', JSON.stringify(data.user))
-          setSuccess(true)
-          setTimeout(() => window.location.reload(), 2000)
-        }
+      // 1) Ask our backend to create an order. Amount is decided
+      //    server-side (from the Plan collection) — the frontend never sends a price.
+      const order = await createOrderAPI('pro')
+      if (!order?.success) {
+        setErrorMsg(order?.error || 'Could not start payment. Try again.')
+        setLoading(false)
+        return
       }
-    } catch { alert('Failed. Try again.') }
+
+      // 2) Open Razorpay's own hosted Checkout modal. Card/UPI details
+      //    are typed directly into Razorpay's UI — they never pass
+      //    through our frontend or backend code.
+      const options = {
+        key: order.keyId, // public key — safe to expose
+        amount: order.amount,
+        currency: order.currency,
+        name: 'NeuralIQ',
+        description: `${proPlan?.name || 'Pro'} Plan — One-Time Payment, Lifetime Access`,
+        order_id: order.orderId,
+        prefill: {
+          name: order.user?.name,
+          email: order.user?.email,
+        },
+        theme: { color: '#7c3aed' },
+        handler: async (response) => {
+          // 3) Send Razorpay's proof back to our backend, which
+          //    recomputes the signature server-side before trusting it.
+          try {
+            const verifyRes = await verifyPaymentAPI({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            })
+
+            if (verifyRes?.success) {
+              localStorage.setItem('neuraliq_user', JSON.stringify(verifyRes.user))
+              setPaidTxnId(verifyRes.transactionId)
+              setSuccess(true)
+              setSelected('pro')
+            } else {
+              setErrorMsg(verifyRes?.error || 'Payment could not be verified. Contact support if money was deducted.')
+            }
+          } catch {
+            setErrorMsg('Payment verification failed. Contact support if money was deducted.')
+          } finally {
+            setLoading(false)
+          }
+        },
+        modal: {
+          ondismiss: () => setLoading(false), // user closed the modal without paying
+        },
+      }
+
+      // Most common real-world failure: the Razorpay Checkout script
+      // (loaded via <script> tag in index.html) hasn't loaded yet or was
+      // blocked (ad blockers, some Incognito extension configs, or a
+      // slow/flaky connection to checkout.razorpay.com). Give a specific,
+      // actionable message instead of a generic one.
+      if (!window.Razorpay) {
+        setErrorMsg('Payment gateway failed to load. Check your internet connection, disable any ad blocker for this site, and try again.')
+        setLoading(false)
+        return
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', () => {
+        setErrorMsg('Payment failed. No charge was made — please try again.')
+        setLoading(false)
+      })
+      rzp.open()
+    } catch (err) {
+      console.error('Razorpay checkout failed to open:', err)
+      setErrorMsg('Something went wrong starting the payment. Try again.')
+      setLoading(false)
+    }
+  }
+
+  const handleDowngrade = async () => {
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      const data = await downgradeToFreeAPI()
+      if (data?.success) {
+        localStorage.setItem('neuraliq_user', JSON.stringify(data.user))
+        setTimeout(() => window.location.reload(), 1500)
+      } else {
+        setErrorMsg('Downgrade failed. Try again.')
+      }
+    } catch {
+      setErrorMsg('Downgrade failed. Try again.')
+    }
     setLoading(false)
   }
 
-  // ✅ All calculations preserved exactly
-  const FREE_LIMIT   = 100000
-  const usagePercent = Math.min(((user?.tokensUsed || 0) / FREE_LIMIT) * 100, 100)
-  const isPro        = user?.plan === 'pro'
+  const handleConfirm = () => {
+    if (selected === user?.plan) return
+    if (selected === 'pro') handleUpgrade()
+    else handleDowngrade()
+  }
 
-  const plans = [
-    {
-      id: 'free',
-      name: 'Free',
-      price: '₹0',
-      period: 'forever',
-      description: 'Perfect for getting started',
-      features: [
-        '1,00,000 tokens/month',
-        '10 file uploads',
-        'Basic AI chat (LLaMA)',
-        'PDF summarization',
-        'Chat history',
-        'Community support',
-      ]
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      price: '₹499',
-      period: 'per month',
-      description: 'For power users & teams',
-      highlighted: true,
-      features: [
-        'Unlimited tokens',
-        'Unlimited file uploads',
-        'Advanced LLaMA AI (2x response length)',
-        'Advanced PDF analysis',
-        'Full chat history',
-        'Priority support',
-        'Early access to new features',
-      ]
-    }
-  ]
+  const tokenLimit    = usageSummary?.tokenLimit ?? (isPro ? null : 100000)
+  const monthlyTokens = usageSummary?.monthlyTokensUsed ?? (user?.tokensUsed || 0)
+  const usagePercent  = tokenLimit == null ? 0 : Math.min((monthlyTokens / tokenLimit) * 100, 100)
+
+  // Rupees formatting + period label derived from each plan's billingCycle
+  // ('free' → forever, 'lifetime' → one-time, 'monthly' → per month —
+  // this last one is unused today but means adding a recurring plan later
+  // needs zero changes here).
+  const periodLabelFor = (billingCycle) => {
+    if (billingCycle === 'free') return 'forever'
+    if (billingCycle === 'lifetime') return 'one-time'
+    if (billingCycle === 'monthly') return 'per month'
+    return ''
+  }
+
+  const displayPlans = plans.map(p => ({
+    id: p.planId,
+    name: p.name,
+    price: `₹${(p.priceInPaise / 100).toFixed(p.priceInPaise % 100 === 0 ? 0 : 2)}`,
+    period: periodLabelFor(p.billingCycle),
+    description: p.description,
+    highlighted: p.planId === 'pro',
+    features: p.features,
+  }))
 
   return (
     <div style={{
@@ -106,7 +207,7 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <p style={{ color: 'white', fontWeight: 600, fontSize: '13px' }}>Current Usage</p>
               <p style={{ fontSize: '12px', fontWeight: 700, color: usagePercent >= 80 ? '#fca5a5' : '#c4b5fd' }}>
-                {(user?.tokensUsed || 0).toLocaleString()} / {FREE_LIMIT.toLocaleString()} tokens
+                {monthlyTokens.toLocaleString()} / {tokenLimit == null ? '∞' : tokenLimit.toLocaleString()} tokens
               </p>
             </div>
             <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', overflow: 'hidden' }}>
@@ -127,25 +228,67 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
           </div>
         )}
 
-        {/* ✅ Success message */}
+        {/* ✅ Success notification — payment done + plan activated */}
         {success && (
           <div style={{
-            padding: '14px 18px', borderRadius: '12px', marginBottom: '24px',
+            padding: '16px 20px', borderRadius: '12px', marginBottom: '24px',
             background: 'rgba(16,185,129,0.09)', border: '1px solid rgba(16,185,129,0.22)',
-            display: 'flex', alignItems: 'center', gap: '10px',
           }} className="fade-in">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            <span style={{ color: '#6ee7b7', fontSize: '13px', fontWeight: 600 }}>
-              🎉 Plan updated successfully! Reloading…
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span style={{ color: '#6ee7b7', fontSize: '13px', fontWeight: 600 }}>
+                🎉 Payment successful — your Pro plan is now active!
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {paidTxnId && (
+                <button
+                  onClick={() => downloadReceiptAPI(paidTxnId)}
+                  style={{
+                    padding: '8px 14px', borderRadius: '9px', fontSize: '12px', fontWeight: 700,
+                    background: 'rgba(110,231,183,0.12)', color: '#6ee7b7',
+                    border: '1px solid rgba(110,231,183,0.3)', cursor: 'pointer',
+                  }}
+                >
+                  ⬇ Download Receipt (PDF)
+                </button>
+              )}
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  padding: '8px 14px', borderRadius: '9px', fontSize: '12px', fontWeight: 700,
+                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)',
+                  border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer',
+                }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ⚠️ Error notification */}
+        {errorMsg && (
+          <div style={{
+            padding: '14px 18px', borderRadius: '12px', marginBottom: '24px',
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+            color: '#fca5a5', fontSize: '13px', fontWeight: 600,
+          }} className="fade-in">
+            ⚠️ {errorMsg}
           </div>
         )}
 
         {/* ── Plan cards ───────────────────────────────────── */}
+        {plansLoading && (
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px', marginBottom: '20px' }}>
+            Loading plans…
+          </p>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', maxWidth: '760px', marginBottom: '24px' }}>
-          {plans.map((plan) => {
+          {displayPlans.map((plan) => {
             const isCurrentPlan = user?.plan === plan.id
             const isSelected    = selected === plan.id
             const isPlanPro     = plan.id === 'pro'
@@ -251,7 +394,7 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
         <div style={{ maxWidth: '760px' }}>
           {selected !== user?.plan ? (
             <button
-              onClick={handleUpgrade}
+              onClick={handleConfirm}
               disabled={loading}
               style={{
                 width: '100%', padding: '15px', borderRadius: '13px', fontSize: '15px', fontWeight: 800,
@@ -271,14 +414,14 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
               {loading ? (
                 <>
                   <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', animation: 'spin 0.7s linear infinite' }} />
-                  Processing…
+                  {selected === 'pro' ? 'Opening secure checkout…' : 'Processing…'}
                 </>
               ) : selected === 'pro' ? (
                 <>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                   </svg>
-                  Confirm Upgrade to Pro — ₹499/mo
+                  {proPlan ? `Pay ₹${(proPlan.priceInPaise / 100).toFixed(proPlan.priceInPaise % 100 === 0 ? 0 : 2)} & Upgrade to Pro` : 'Upgrade to Pro'}
                 </>
               ) : (
                 <>
@@ -303,10 +446,51 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
           {/* Fine print */}
           <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '11px', textAlign: 'center', marginTop: '12px', lineHeight: '1.6' }}>
             {selected === 'pro'
-              ? 'Upgrade takes effect immediately · Cancel anytime'
-              : 'Downgrade takes effect at end of billing cycle'}
+              ? 'Secure payment via Razorpay · One-time payment · Lifetime access, no renewals'
+              : 'Downgrading removes Pro access immediately'}
           </p>
         </div>
+
+        {/* ── Billing history ──────────────────────────────── */}
+        {transactions.length > 0 && (
+          <div style={{ maxWidth: '760px', marginTop: '36px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'white', marginBottom: '14px' }}>
+              Billing History
+            </h3>
+            <div style={{
+              borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.02)', overflow: 'hidden',
+            }}>
+              {transactions.map((txn, i) => (
+                <div key={txn._id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '14px 18px',
+                  borderBottom: i !== transactions.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                }}>
+                  <div>
+                    <p style={{ color: 'white', fontSize: '13px', fontWeight: 600 }}>
+                      NeuralIQ Pro — ₹{(txn.amount / 100).toFixed(2)}
+                    </p>
+                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', marginTop: '2px' }}>
+                      {new Date(txn.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {' · '}{txn.receiptNumber}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => downloadReceiptAPI(txn._id)}
+                    style={{
+                      padding: '7px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
+                      background: 'rgba(124,58,237,0.1)', color: '#c4b5fd',
+                      border: '1px solid rgba(124,58,237,0.25)', cursor: 'pointer',
+                    }}
+                  >
+                    ⬇ Receipt
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

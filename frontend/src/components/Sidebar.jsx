@@ -56,6 +56,15 @@ export default function Sidebar({ activePage, setActivePage, user, onLogout }) {
       )
     },
     {
+      name: 'Admin',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      )
+    },
+    {
       name: 'Pricing',
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -189,7 +198,9 @@ export default function Sidebar({ activePage, setActivePage, user, onLogout }) {
 
       {/* ── Nav items ── */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-        {navItems.map((item) => {
+        {navItems
+          .filter(item => item.name !== 'Admin' || user?.isAdmin === true)
+          .map((item) => {
           const active = activePage === item.name
           return (
             <button

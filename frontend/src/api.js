@@ -80,6 +80,15 @@ export const getUsageStatsAPI = async () => {
   return handleResponse(res)
 }
 
+// Current-month usage vs. the user's plan limit — DB-driven (limit
+// comes from the Plan collection on the backend, never hardcoded here)
+export const getUsageSummaryAPI = async () => {
+  const res = await fetch(`${BASE_URL}/chat/usage-summary`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  })
+  return handleResponse(res)
+}
+
 export const renameChatAPI = async (chatId, title) => {
   const res = await fetch(`${BASE_URL}/chat/${chatId}/rename`, {
     method: 'PATCH',
@@ -97,13 +106,107 @@ export const deleteChatAPI = async (chatId) => {
   return handleResponse(res)
 }
 
-// ─── SUBSCRIPTION ─────────────────────────────────────────────
-export const upgradeToProAPI = async () => {
-  const res = await fetch(`${BASE_URL}/subscription/upgrade`, {
+// ─── ADMIN BILLING DASHBOARD ─────────────────────────────────────
+// All of these require isAdmin === true on the backend (requireAdmin
+// middleware) — a non-admin token gets a 403, regardless of what the
+// frontend shows or hides.
+export const getAdminOverviewAPI = async () => {
+  const res = await fetch(`${BASE_URL}/admin/overview`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  })
+  return handleResponse(res)
+}
+
+export const getAdminRevenueChartAPI = async (months = 6) => {
+  const res = await fetch(`${BASE_URL}/admin/revenue-chart?months=${months}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  })
+  return handleResponse(res)
+}
+
+export const getAdminDailyRevenueChartAPI = async (days = 30) => {
+  const res = await fetch(`${BASE_URL}/admin/daily-revenue-chart?days=${days}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  })
+  return handleResponse(res)
+}
+
+export const getAdminTransactionsAPI = async ({ status = 'paid', page = 1, limit = 20 } = {}) => {
+  const res = await fetch(`${BASE_URL}/admin/transactions?status=${status}&page=${page}&limit=${limit}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  })
+  return handleResponse(res)
+}
+
+export const getAdminAuditLogsAPI = async ({ eventType = 'all', page = 1, limit = 30 } = {}) => {
+  const res = await fetch(`${BASE_URL}/admin/audit-logs?eventType=${eventType}&page=${page}&limit=${limit}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  })
+  return handleResponse(res)
+}
+
+// ─── SUBSCRIPTION / PAYMENTS ────────────────────────────────────
+// Pricing is DB-driven — fetch it instead of hardcoding a ₹ figure.
+// No auth required (this is a public pricing endpoint).
+export const getPlansAPI = async () => {
+  const res = await fetch(`${BASE_URL}/subscription/plans`)
+  return res.json()
+}
+
+// Step 1: ask backend to create a Razorpay order (amount is decided
+// server-side, never trust a client-supplied amount). planId defaults
+// to 'pro' on the backend if omitted, so existing calls with no args
+// keep working exactly as before.
+export const createOrderAPI = async (planId) => {
+  const res = await fetch(`${BASE_URL}/subscription/create-order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+    body: JSON.stringify(planId ? { planId } : {})
+  })
+  return handleResponse(res)
+}
+
+// Step 2: after Razorpay Checkout succeeds, send the payment proof
+// back so the backend can verify the signature and activate Pro
+export const verifyPaymentAPI = async (payload) => {
+  const res = await fetch(`${BASE_URL}/subscription/verify-payment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+    body: JSON.stringify(payload)
+  })
+  return handleResponse(res)
+}
+
+export const downgradeToFreeAPI = async () => {
+  const res = await fetch(`${BASE_URL}/subscription/downgrade`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${getToken()}` }
   })
   return handleResponse(res)
+}
+
+export const getTransactionsAPI = async () => {
+  const res = await fetch(`${BASE_URL}/subscription/transactions`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  })
+  return handleResponse(res)
+}
+
+// Receipts are a PDF file stream, not JSON — trigger a browser download
+export const downloadReceiptAPI = async (transactionId) => {
+  const res = await fetch(`${BASE_URL}/subscription/receipt/${transactionId}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  })
+  if (!res.ok) throw new Error('Could not download receipt')
+  const blob = await res.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `NeuralIQ_Receipt.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
 }
 
 // ─── AVATAR ───────────────────────────────────────────────────

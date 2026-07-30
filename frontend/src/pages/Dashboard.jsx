@@ -1,9 +1,51 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
-import { getUsageStatsAPI } from '../api'
+import { getUsageStatsAPI, getUsageSummaryAPI } from '../api'
+
+// ── Steampunk design tokens ──────────────────────────────
+// Module-level (not per-render) since Gear/PipeH below need them and
+// must themselves be module-level components — see comment there.
+const GOLD       = '#C5A059'
+const GOLD_DIM   = '#8B6914'
+const COPPER     = '#B8860B'
+const BG_BASE    = '#0B1510'
+const BG_CARD    = 'rgba(20,35,25,0.82)'
+const BG_SURFACE = 'rgba(15,28,20,0.9)'
+const BORDER_GOLD = `1px solid ${GOLD}`
+
+// Gear SVG component — moved to module scope (was previously defined
+// inside the Dashboard function body, recreated on every render, which
+// resets its internal state and cost extra work each render; it only
+// ever depended on the module-level GOLD constant, never on any
+// Dashboard prop/state, so hoisting it out changes nothing about what
+// it renders).
+const Gear = ({ size = 40, opacity = 0.18, rotate = 0 }) => (
+  <svg width={size} height={size} viewBox="0 0 40 40"
+    style={{ opacity, transform: `rotate(${rotate}deg)` }}>
+    <circle cx="20" cy="20" r="7" fill="none" stroke={GOLD} strokeWidth="2"/>
+    <circle cx="20" cy="20" r="3" fill={GOLD} opacity="0.4"/>
+    {[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i) => {
+      const rad = a * Math.PI / 180
+      const x1 = 20 + 9  * Math.cos(rad)
+      const y1 = 20 + 9  * Math.sin(rad)
+      const x2 = 20 + 13 * Math.cos(rad)
+      const y2 = 20 + 13 * Math.sin(rad)
+      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={GOLD} strokeWidth="2.5" strokeLinecap="round"/>
+    })}
+  </svg>
+)
+
+// Pipe connector SVG — same reasoning as Gear above.
+const PipeH = ({ width = 60, color = GOLD }) => (
+  <svg width={width} height="14" viewBox={`0 0 ${width} 14`}>
+    <rect x="0" y="4" width={width} height="6" rx="3" fill={`${color}22`} stroke={`${color}55`} strokeWidth="1"/>
+    <rect x="0" y="5.5" width={width} height="3" rx="1.5" fill={`${color}40`}/>
+  </svg>
+)
 
 export default function Dashboard({ activePage, setActivePage, user, onLogout }) {
   const [stats, setStats] = useState([])
+  const [usageSummary, setUsageSummary] = useState(null)
 
   // ✅ Logic preserved exactly
   useEffect(() => {
@@ -18,12 +60,22 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
     fetchStats()
   }, [])
 
+  // Monthly usage vs. plan limit — separate effect, separate endpoint,
+  // doesn't disturb the 7-day stats fetch above.
+  useEffect(() => {
+    getUsageSummaryAPI()
+      .then(data => { if (data?.success) setUsageSummary(data) })
+      .catch(() => console.log('Could not load usage summary'))
+  }, [])
+
   // ✅ All calculations preserved exactly
   const bars = [30, 45, 35, 60, 40, 55, 70, 50, 65, 75, 45, 80]
-  const FREE_LIMIT = 100000
-  const tokensUsed = user?.tokensUsed || 0
-  const usagePercent = Math.min((tokensUsed / FREE_LIMIT) * 100, 100)
   const isPro = user?.plan === 'pro'
+  // Falls back to the old lifetime tokensUsed/100000 only until
+  // usageSummary has loaded, so the gauge doesn't flash "0" on first render.
+  const tokenLimit = usageSummary?.tokenLimit ?? (isPro ? null : 100000)
+  const tokensUsed = usageSummary?.monthlyTokensUsed ?? (user?.tokensUsed || 0)
+  const usagePercent = tokenLimit == null ? 0 : Math.min((tokensUsed / tokenLimit) * 100, 100)
 
   const maxTokens = Math.max(...stats.map(s => s.tokensUsed), 1)
   const graphPoints = stats.map((s, i) => {
@@ -43,14 +95,8 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
   const isWarning = !isPro && usagePercent >= 80
   const isLimit   = !isPro && usagePercent >= 100
 
-  // ── Steampunk design tokens ──────────────────────────────
-  const GOLD       = '#C5A059'
-  const GOLD_DIM   = '#8B6914'
-  const COPPER     = '#B8860B'
-  const BG_BASE    = '#0B1510'
-  const BG_CARD    = 'rgba(20,35,25,0.82)'
-  const BG_SURFACE = 'rgba(15,28,20,0.9)'
-  const BORDER_GOLD = `1px solid ${GOLD}`
+  // ── Steampunk design tokens (GOLD, GOLD_DIM, etc.) and the Gear/PipeH
+  // components now live at module scope above — see comment there.
 
   const card = {
     background: BG_CARD,
@@ -70,31 +116,6 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
     fontFamily: "'JetBrains Mono', monospace",
     marginBottom: '14px',
   }
-
-  // Gear SVG component inline
-  const Gear = ({ size = 40, opacity = 0.18, rotate = 0 }) => (
-    <svg width={size} height={size} viewBox="0 0 40 40"
-      style={{ opacity, transform: `rotate(${rotate}deg)` }}>
-      <circle cx="20" cy="20" r="7" fill="none" stroke={GOLD} strokeWidth="2"/>
-      <circle cx="20" cy="20" r="3" fill={GOLD} opacity="0.4"/>
-      {[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i) => {
-        const rad = a * Math.PI / 180
-        const x1 = 20 + 9  * Math.cos(rad)
-        const y1 = 20 + 9  * Math.sin(rad)
-        const x2 = 20 + 13 * Math.cos(rad)
-        const y2 = 20 + 13 * Math.sin(rad)
-        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={GOLD} strokeWidth="2.5" strokeLinecap="round"/>
-      })}
-    </svg>
-  )
-
-  // Pipe connector SVG
-  const PipeH = ({ width = 60, color = GOLD }) => (
-    <svg width={width} height="14" viewBox={`0 0 ${width} 14`}>
-      <rect x="0" y="4" width={width} height="6" rx="3" fill={`${color}22`} stroke={`${color}55`} strokeWidth="1"/>
-      <rect x="0" y="5.5" width={width} height="3" rx="1.5" fill={`${color}40`}/>
-    </svg>
-  )
 
   return (
     <div style={{
@@ -257,7 +278,7 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
                       {tokensUsed.toLocaleString()}
                     </span>
                     <span style={{ fontSize: '11px', color: `${GOLD}55`, marginTop: '3px', fontFamily: "'JetBrains Mono', monospace" }}>
-                      {isPro ? '/ ∞' : '/ 100,000'}
+                      {isPro || tokenLimit == null ? '/ ∞' : `/ ${tokenLimit.toLocaleString()}`}
                     </span>
                   </div>
                 </div>
@@ -266,10 +287,12 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '4px', gap: '4px' }}>
                   <PipeH width={80}/>
                   <p style={{ fontSize: '12px', color: `${GOLD}88`, fontFamily: "'JetBrains Mono', monospace", margin: 0, textAlign: 'center' }}>
-                    {(FREE_LIMIT - tokensUsed).toLocaleString()} remaining
+                    {isPro || tokenLimit == null ? 'Unlimited' : `${Math.max(tokenLimit - tokensUsed, 0).toLocaleString()} remaining`}
                   </p>
                   <p style={{ fontSize: '10px', color: `${GOLD}44`, fontFamily: "'JetBrains Mono', monospace", margin: 0 }}>
-                    Free Plan Limit: {FREE_LIMIT.toLocaleString()}
+                    {isPro || tokenLimit == null
+                      ? 'Pro Plan — no monthly cap'
+                      : `Free Plan Limit: ${tokenLimit.toLocaleString()} · resets ${usageSummary?.resetsOn ? new Date(usageSummary.resetsOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'monthly'}`}
                   </p>
                 </div>
               </div>
@@ -643,7 +666,7 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '12px' }}>
                 {[
                   { label: 'Plan', value: isPro ? '✦ Pro' : 'Free' },
-                  { label: 'Tokens Remaining', value: isPro ? '∞ Unlimited' : Math.max(FREE_LIMIT - tokensUsed, 0).toLocaleString() },
+                  { label: 'Tokens Remaining', value: (isPro || tokenLimit == null) ? '∞ Unlimited' : Math.max(tokenLimit - tokensUsed, 0).toLocaleString() },
                   { label: 'Documents Processed', value: user?.documentsProcessed || 0 },
                   { label: 'Active Days', value: `${stats.filter(s => s.tokensUsed > 0).length} / 7` },
                 ].map((row, i) => (

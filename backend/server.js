@@ -1,5 +1,6 @@
 ﻿const express = require('express')
 const cors = require('cors')
+const helmet = require('helmet')
 const http = require('http')
 const { Server } = require('socket.io')
 require('dotenv').config()
@@ -11,11 +12,13 @@ require('./config/passport')
 const rateLimit = require('express-rate-limit')
 
 const connectDB = require('./config/db')
+const { seedPlans } = require('./scripts/seedPlans')
 const authRoutes = require('./routes/authRoutes')
 const chatRoutes = require('./routes/chatRoutes')
 const fileRoutes = require('./routes/fileRoutes')
 const googleAuthRoutes = require('./routes/googleAuth')
 const subscriptionRoutes = require('./routes/subscriptionRoutes')
+const adminRoutes = require('./routes/adminRoutes')
 const workspaceRoutes = require('./routes/workspaceRoutes')
 
 const app = express()
@@ -66,7 +69,14 @@ server.on('upgrade', (req, socket, head) => {
 
 const PORT = process.env.PORT || 5000
 
-connectDB()
+connectDB().then(() => {
+  seedPlans().catch((err) => console.error('Plan seeding failed (non-fatal):', err.message))
+})
+
+app.use(helmet({
+  contentSecurityPolicy: false, // this is a JSON API, not an HTML-serving app — CSP has no target here
+  crossOriginEmbedderPolicy: false, // avoid interfering with Socket.io's cross-origin handshake
+}))
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -80,7 +90,14 @@ app.use(cors({
   credentials: true
 }))
 
-app.use(express.json())
+// ✅ Capture rawBody alongside parsed JSON — required so the Razorpay
+// webhook handler can verify its signature against the exact raw bytes
+// Razorpay signed, not the re-serialized parsed object.
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf
+  }
+}))
 
 app.use(session({
   secret: process.env.JWT_SECRET || 'neuraliq_secret',
@@ -124,17 +141,28 @@ const uploadLimiter = rateLimit({
   legacyHeaders: false
 })
 
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { error: 'Too many payment requests. Please wait 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+})
+
 app.use('/api', generalLimiter)
 app.use('/api/auth/login', authLimiter)
 app.use('/api/auth/signup', authLimiter)
 app.use('/api/chat', chatLimiter)
 app.use('/api/files', uploadLimiter)
+app.use('/api/subscription/create-order', paymentLimiter)
+app.use('/api/subscription/verify-payment', paymentLimiter)
 
 // ✅ Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/chat', chatRoutes)
 app.use('/api/files', fileRoutes)
 app.use('/api/subscription', subscriptionRoutes)
+app.use('/api/admin', adminRoutes)
 app.use('/api/workspace', workspaceRoutes)
 app.use('/auth', googleAuthRoutes)
 
