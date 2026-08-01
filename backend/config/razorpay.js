@@ -17,6 +17,20 @@ if (missing.length > 0) {
   )
 }
 
+// Trimmed once, here, and re-exported — this is the single source of
+// truth every other file should import from instead of reading
+// process.env directly. A trailing space/newline pasted into Render's
+// env var UI is invisible in the dashboard but silently breaks HMAC
+// signature verification (crypto.createHmac hashes the exact raw
+// string) even though order creation still succeeds (the Razorpay
+// SDK's HTTP auth layer tolerates trailing whitespace). That mismatch
+// produces exactly this symptom: Razorpay shows "Payment Successful"
+// but our own signature check always fails. Trimming at the source
+// closes that whole class of bug for every consumer at once.
+const RAZORPAY_KEY_ID = (process.env.RAZORPAY_KEY_ID || '').trim()
+const RAZORPAY_KEY_SECRET = (process.env.RAZORPAY_KEY_SECRET || '').trim()
+const RAZORPAY_WEBHOOK_SECRET = (process.env.RAZORPAY_WEBHOOK_SECRET || '').trim()
+
 let _client = null
 
 // Constructed lazily, on first actual use (i.e. when someone hits
@@ -35,10 +49,10 @@ const getRazorpayClient = () => {
   }
 
   _client = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
+    key_id: RAZORPAY_KEY_ID,
+    key_secret: RAZORPAY_KEY_SECRET,
   })
   return _client
 }
 
-module.exports = { getRazorpayClient }
+module.exports = { getRazorpayClient, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET }

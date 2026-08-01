@@ -1,5 +1,5 @@
 const crypto = require('crypto')
-const { getRazorpayClient } = require('../config/razorpay')
+const { getRazorpayClient, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET } = require('../config/razorpay')
 const Payment = require('../models/Payment')
 const User = require('../models/User')
 const planService = require('./planService')
@@ -65,7 +65,7 @@ const createOrderForUser = async (user, planId = 'pro') => {
 // ── Verify HMAC SHA256 signature from Razorpay Checkout callback ──
 const verifySignature = (orderId, paymentId, signature) => {
   const expected = crypto
-    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .createHmac('sha256', RAZORPAY_KEY_SECRET)
     .update(`${orderId}|${paymentId}`)
     .digest('hex')
 
@@ -76,7 +76,7 @@ const verifySignature = (orderId, paymentId, signature) => {
 // ── Verify HMAC SHA256 signature on a raw webhook payload ─────────
 const verifyWebhookSignature = (rawBody, signature) => {
   const expected = crypto
-    .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
+    .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
     .update(rawBody)
     .digest('hex')
 

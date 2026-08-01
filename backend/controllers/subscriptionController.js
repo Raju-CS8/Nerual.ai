@@ -12,6 +12,7 @@ const planService = require('../services/planService')
 const receiptService = require('../services/receiptService')
 const auditLogService = require('../services/auditLogService')
 const logger = require('../utils/logger')
+const { RAZORPAY_KEY_ID } = require('../config/razorpay')
 
 // Small helper — every audit log call needs the same two fields pulled
 // off the request. req.ip requires `app.set('trust proxy', 1)`, already
@@ -60,7 +61,7 @@ const createOrder = async (req, res) => {
       orderId: order.orderId,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.RAZORPAY_KEY_ID,
+      keyId: RAZORPAY_KEY_ID,
       user: { name: user.name, email: user.email },
     })
   } catch (error) {
