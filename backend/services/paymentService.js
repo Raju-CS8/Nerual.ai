@@ -1,5 +1,5 @@
 const crypto = require('crypto')
-const { razorpayClient } = require('../config/razorpay')
+const { getRazorpayClient } = require('../config/razorpay')
 const Payment = require('../models/Payment')
 const User = require('../models/User')
 const planService = require('./planService')
@@ -43,7 +43,7 @@ const createOrderForUser = async (user, planId = 'pro') => {
   // Snapshot the price at purchase time onto the order/payment record —
   // if the Plan's price changes later, past receipts still show what
   // was actually charged, not today's price.
-  const order = await razorpayClient.orders.create({
+  const order = await getRazorpayClient().orders.create({
     amount: plan.priceInPaise,
     currency: plan.currency,
     receipt: `order_rcpt_${Date.now()}`,
