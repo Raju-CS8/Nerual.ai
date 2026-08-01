@@ -33,8 +33,16 @@ const paymentSchema = new mongoose.Schema({
   paymentId: {
     type: String,
     unique: true,
-    sparse: true, // most rows start with paymentId: null before payment completes
-    default: null,
+    // sparse + no default: the field is genuinely OMITTED from the
+    // document until confirmPayment() sets it, so the unique sparse
+    // index correctly excludes unpaid orders instead of treating an
+    // explicit `paymentId: null` as a real (colliding) value. Setting
+    // `default: null` here was the bug — it made every new order write
+    // an explicit null, and MongoDB's sparse index only skips fields
+    // that are truly absent, not fields present-but-null. That meant
+    // only ONE unpaid order could ever exist across the whole
+    // collection before every next createOrder() hit E11000.
+    sparse: true,
   },
   signature: {
     type: String,
