@@ -9,6 +9,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Razorpay's official checkout SDK — must load before Pricing.jsx's
+         "Pay ₹99 & Upgrade to Pro" button is clicked, since it sets the
+         global window.Razorpay that button relies on. Loaded here (not
+         dynamically injected) so it's available as early as possible and
+         doesn't race the app's own JS bundle. -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
