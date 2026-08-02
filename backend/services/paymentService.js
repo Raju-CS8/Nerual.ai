@@ -18,9 +18,42 @@ const createOrderForUser = async (user, planId = 'pro') => {
   }
 
   if (user.plan === plan.planId) {
-    const err = new Error(`You are already on the ${plan.name} plan`)
+    const err = new Error(`You already have lifetime access to the ${plan.name} plan — no need to pay again.`)
     err.statusCode = 400
+    err.code = 'ALREADY_ON_PLAN'
     throw err
+  }
+
+  // Lifetime-purchase check: 'pro' is a one-time payment, not a
+  // subscription (see Plan.billingCycle === 'lifetime'), so a user
+  // who previously paid and later called downgradeToFree still owns
+  // Pro forever. Re-upgrading should never charge them a second time
+  // — instead of creating a Razorpay order, flip their plan straight
+  // back to 'pro' using the original paid Payment record as proof of
+  // purchase. Only applies to plans whose billing cycle is lifetime;
+  // a future subscription-based plan wouldn't hit this branch since
+  // its billingCycle would be something like 'monthly'.
+  if (plan.billingCycle === 'lifetime') {
+    const priorPurchase = await Payment.findOne({
+      userId: user._id,
+      plan: plan.planId,
+      status: 'paid',
+    }).sort({ createdAt: -1 })
+
+    if (priorPurchase) {
+      const reactivatedUser = await User.findByIdAndUpdate(
+        user._id,
+        { plan: plan.planId },
+        { new: true }
+      ).select('-password')
+
+      return {
+        alreadyPurchased: true,
+        user: reactivatedUser,
+        receiptNumber: priorPurchase.receiptNumber,
+        message: `Welcome back! You already own lifetime ${plan.name} access from your ${new Date(priorPurchase.createdAt).toLocaleDateString('en-IN')} purchase — reactivated instantly, no payment needed.`,
+      }
+    }
   }
 
   // Prevent stacking duplicate pending orders — reuse an existing

@@ -49,6 +49,26 @@ const createOrder = async (req, res) => {
     const planId = req.body?.planId || 'pro'
     const order = await paymentService.createOrderForUser(user, planId)
 
+    // Instant reactivation path — no Razorpay order was created, so
+    // the frontend must NOT try to open checkout with this response.
+    // Distinguished by `alreadyPurchased` rather than the presence/
+    // absence of `orderId`, so the frontend's branch is explicit
+    // instead of inferred.
+    if (order.alreadyPurchased) {
+      auditLogService.logEvent('lifetime_plan_reactivated', {
+        userId: user._id,
+        ...reqContext(req),
+        metadata: { planId, receiptNumber: order.receiptNumber },
+      })
+
+      return res.status(200).json({
+        success: true,
+        alreadyPurchased: true,
+        message: order.message,
+        user: { name: order.user.name, email: order.user.email, plan: order.user.plan },
+      })
+    }
+
     auditLogService.logEvent('order_created', {
       userId: user._id,
       ...reqContext(req),

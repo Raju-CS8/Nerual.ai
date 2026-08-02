@@ -15,6 +15,7 @@ const auditLogSchema = new mongoose.Schema({
       'webhook_signature_invalid',
       'webhook_duplicate_ignored',
       'downgrade_to_free',
+      'lifetime_plan_reactivated',
       'admin_access_denied',
     ],
     index: true,

@@ -13,6 +13,7 @@ import {
 export default function Pricing({ activePage, setActivePage, user, onLogout }) {
   const [loading,      setLoading]      = useState(false)
   const [success,      setSuccess]      = useState(false)
+  const [successMsg,   setSuccessMsg]   = useState('🎉 Payment successful — your Pro plan is now active!')
   const [selected,     setSelected]     = useState(user?.plan || 'free')
   const [errorMsg,     setErrorMsg]     = useState('')
   const [transactions, setTransactions] = useState([])
@@ -58,6 +59,19 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
       const order = await createOrderAPI('pro')
       if (!order?.success) {
         setErrorMsg(order?.error || 'Could not start payment. Try again.')
+        setLoading(false)
+        return
+      }
+
+      // Lifetime plans only need to be paid for once. If this user
+      // already purchased Pro before (and, say, downgraded and is now
+      // re-upgrading), the backend reactivates them directly and never
+      // creates a Razorpay order — so there's nothing to check out.
+      if (order.alreadyPurchased) {
+        localStorage.setItem('neuraliq_user', JSON.stringify(order.user))
+        setSuccessMsg(order.message)
+        setSuccess(true)
+        setSelected('pro')
         setLoading(false)
         return
       }
@@ -239,7 +253,7 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
               <span style={{ color: '#6ee7b7', fontSize: '13px', fontWeight: 600 }}>
-                🎉 Payment successful — your Pro plan is now active!
+                {successMsg}
               </span>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -439,7 +453,9 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
               background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
               color: 'rgba(255,255,255,0.35)', fontSize: '14px', fontWeight: 500,
             }}>
-              ✓ You are already on the {user?.plan === 'pro' ? 'Pro' : 'Free'} plan
+              {user?.plan === 'pro'
+                ? '✓ You already have lifetime Pro access — no payment needed'
+                : '✓ You are already on the Free plan'}
             </div>
           )}
 
