@@ -34,9 +34,12 @@ const sendMessage = async (req, res) => {
              Be concise and helpful. Always remember what was discussed earlier in this chat.`
       },
       ...history
-        .filter(msg => msg.role === 'user' || msg.role === 'assistant')
-        .slice(-20)
-        .map(msg => ({ role: msg.role, content: msg.content })),
+  .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+  .slice(-10)
+  .map(msg => ({
+    role: msg.role,
+    content: String(msg.content).slice(0, 3000)
+  })),
       { role: 'user', content: message }
     ]
 
