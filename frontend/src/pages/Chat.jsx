@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import Sidebar from '../components/Sidebar'
 import { sendMessageAPI, getChatsAPI, getChatAPI, renameChatAPI, deleteChatAPI } from '../api'
 import jsPDF from 'jspdf'
@@ -10,23 +11,110 @@ import { saveAs } from 'file-saver'
 const MarkdownMessage = ({ content }) => (
   <div style={{ color: 'rgba(240,238,255,0.88)', fontSize: '13.5px', lineHeight: '1.72' }}>
     <ReactMarkdown
-      components={{
-        code: ({ inline, children, ...props }) => inline
-          ? <code style={{ padding: '2px 7px', borderRadius: '5px', fontSize: '12px', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(124,58,237,0.22)', color: '#ddd6fe' }} {...props}>{children}</code>
-          : <pre style={{ padding: '14px 16px', borderRadius: '10px', overflowX: 'auto', margin: '10px 0', background: 'rgba(0,0,0,0.38)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <code style={{ fontSize: '12px', fontFamily: 'JetBrains Mono, monospace', color: '#86efac' }} {...props}>{children}</code>
-            </pre>,
-        p:      ({ children }) => <p style={{ marginBottom: '8px' }}>{children}</p>,
-        ul:     ({ children }) => <ul style={{ paddingLeft: '18px', marginBottom: '8px' }}>{children}</ul>,
-        ol:     ({ children }) => <ol style={{ paddingLeft: '18px', marginBottom: '8px' }}>{children}</ol>,
-        li:     ({ children }) => <li style={{ marginBottom: '3px' }}>{children}</li>,
-        strong: ({ children }) => <strong style={{ color: 'white', fontWeight: 600 }}>{children}</strong>,
-        h1:     ({ children }) => <h1 style={{ fontSize: '17px', fontWeight: 700, color: 'white', marginBottom: '8px' }}>{children}</h1>,
-        h2:     ({ children }) => <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'white', marginBottom: '6px' }}>{children}</h2>,
-        h3:     ({ children }) => <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'white', marginBottom: '5px' }}>{children}</h3>,
+  remarkPlugins={[remarkGfm]}
+  components={{
+    code: ({ inline, children, ...props }) => inline
+      ? <code
+          style={{
+            padding: '2px 7px',
+            borderRadius: '5px',
+            fontSize: '12px',
+            fontFamily: 'JetBrains Mono, monospace',
+            background: 'rgba(124,58,237,0.22)',
+            color: '#ddd6fe'
+          }}
+          {...props}
+        >
+          {children}
+        </code>
+      : <pre
+          style={{
+            padding: '14px 16px',
+            borderRadius: '10px',
+            overflowX: 'auto',
+            margin: '10px 0',
+            background: 'rgba(0,0,0,0.38)',
+            border: '1px solid rgba(255,255,255,0.07)'
+          }}
+        >
+          <code
+            style={{
+              fontSize: '12px',
+              fontFamily: 'JetBrains Mono, monospace',
+              color: '#86efac'
+            }}
+            {...props}
+          >
+            {children}
+          </code>
+        </pre>,
+
+    p: ({ children }) =>
+      <p style={{ marginBottom: '8px' }}>{children}</p>,
+
+    ul: ({ children }) =>
+      <ul style={{ paddingLeft: '18px', marginBottom: '8px' }}>{children}</ul>,
+
+    ol: ({ children }) =>
+      <ol style={{ paddingLeft: '18px', marginBottom: '8px' }}>{children}</ol>,
+
+    li: ({ children }) =>
+      <li style={{ marginBottom: '3px' }}>{children}</li>,
+
+    strong: ({ children }) =>
+      <strong style={{ color: 'white', fontWeight: 600 }}>{children}</strong>,
+
+    h1: ({ children }) =>
+      <h1 style={{
+        fontSize: '17px',
+        fontWeight: 700,
+        color: 'white',
+        marginBottom: '8px'
       }}>
-      {content}
-    </ReactMarkdown>
+        {children}
+      </h1>,
+
+    h2: ({ children }) =>
+      <h2 style={{
+        fontSize: '15px',
+        fontWeight: 700,
+        color: 'white',
+        marginBottom: '6px'
+      }}>
+        {children}
+      </h2>,
+
+    h3: ({ children }) =>
+      <h3 style={{
+        fontSize: '13px',
+        fontWeight: 600,
+        color: 'white',
+        marginBottom: '5px'
+      }}>
+        {children}
+      </h3>,
+
+    table: ({ children }) =>
+      <table style={{
+        width: '100%',
+        borderCollapse: 'collapse',
+        margin: '12px 0'
+      }}>
+        {children}
+      </table>,
+
+    th: ({ children }) =>
+      <th style={{
+        padding: '8px',
+        textAlign: 'left',
+        borderBottom: '1px solid rgba(255,255,255,0.2)'
+      }}>
+        {children}
+      </th>,
+  }}
+>
+  {content}
+</ReactMarkdown>
   </div>
 )
 

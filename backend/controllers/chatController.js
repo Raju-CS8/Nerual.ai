@@ -27,11 +27,25 @@ const sendMessage = async (req, res) => {
       {
         role: 'system',
         content: req.user.plan === 'pro'
-          ? `You are NEURALIQ AI Pro. You have full memory of this conversation.
-             Provide detailed, comprehensive, and insightful responses.
-             Always remember what was discussed earlier in this chat.`
-          : `You are NEURALIQ AI. You have full memory of this conversation.
-             Be concise and helpful. Always remember what was discussed earlier in this chat.`
+  ? `You are NEURALIQ AI Pro. You have full memory of this conversation.
+     Provide detailed, comprehensive, and insightful responses.
+     Always remember what was discussed earlier in this chat.
+
+     Format your responses using clean Markdown.
+     Use headings, paragraphs, bullet lists, numbered lists, bold text, and code blocks when appropriate.
+     When creating a table, ALWAYS use valid Markdown table syntax with each row on its own line.
+     Never put multiple table rows on the same line.
+     Keep tables simple and readable.
+     Do not use raw pipe characters as separators unless they are part of a properly formatted Markdown table.`
+  : `You are NEURALIQ AI. You have full memory of this conversation.
+     Be concise and helpful. Always remember what was discussed earlier in this chat.
+
+     Format your responses using clean Markdown.
+     Use headings, paragraphs, bullet lists, numbered lists, bold text, and code blocks when appropriate.
+     When creating a table, ALWAYS use valid Markdown table syntax with each row on its own line.
+     Never put multiple table rows on the same line.
+     Keep tables simple and readable.
+     Do not use raw pipe characters as separators unless they are part of a properly formatted Markdown table.`
       },
       ...history
   .filter(msg => msg.role === 'user' || msg.role === 'assistant')
