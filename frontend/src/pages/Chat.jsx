@@ -328,7 +328,7 @@ export default function Chat({ activePage, setActivePage, user }) {
               AI Chat
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '12px', marginTop: '2px' }}>
-              {user?.name || 'User'} · LLaMA 3.3-70B via Groq
+              {user?.name || 'User'} · GPT-OSS 120B via Groq
             </p>
           </div>
 

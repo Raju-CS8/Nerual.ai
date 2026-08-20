@@ -21,7 +21,7 @@ const sendMessage = async (req, res) => {
     // middleware/checkUsageLimit.js, wired onto this route in
     // routes/chatRoutes.js — no longer duplicated here.
 
-    const model = 'llama-3.3-70b-versatile'
+    const model = 'openai/gpt-oss-120b'
 
     const conversationMessages = [
       {
@@ -44,7 +44,7 @@ const sendMessage = async (req, res) => {
       messages: conversationMessages,
       model,
       temperature: 0.7,
-      max_tokens: req.user.plan === 'pro' ? 2048 : 1024,
+      max_completion_tokens: req.user.plan === 'pro' ? 2048 : 1024,
     })
 
     const reply = completion.choices[0]?.message?.content || 'No response'

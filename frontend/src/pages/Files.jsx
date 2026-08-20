@@ -415,7 +415,7 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
               </div>
               {pdfText && (
                 <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.16)', marginTop: '8px', textAlign: 'center' }}>
-                  Enter to send · Responses powered by LLaMA 3.3-70B
+                  Enter to send · Responses powered by GPT-OSS 120B
                 </p>
               )}
             </div>

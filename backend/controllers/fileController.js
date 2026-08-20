@@ -65,7 +65,7 @@ Structure your response as:
           content: `Summarize this document:\n\n${truncatedText.slice(0, 4000)}`
         }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       temperature: 0.5,
       max_tokens: 1024,
     })
@@ -119,7 +119,7 @@ ${pdfText.slice(0, 6000)}`
           content: question
         }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       temperature: 0.7,
       max_tokens: 1024,
     })
