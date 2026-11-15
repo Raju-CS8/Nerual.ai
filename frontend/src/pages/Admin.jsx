@@ -3,14 +3,12 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import Sidebar from '../components/Sidebar'
 import { getAdminOverviewAPI, getAdminRevenueChartAPI, getAdminTransactionsAPI, getAdminAuditLogsAPI } from '../api'
 
-// ── Steampunk design tokens — copied from Dashboard.jsx for visual
-// consistency across the app, not redefined differently.
-const GOLD        = '#C5A059'
-const BG_BASE      = '#0B1510'
-const BG_CARD      = 'rgba(20,35,25,0.82)'
-const BORDER_GOLD  = `1px solid ${GOLD}`
+const BRAND_NAME = 'Mural'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+
+const cardCls = 'rounded-lg border border-line bg-surface p-5'
+const thCls = 'px-3 py-2.5 text-left text-xs font-medium text-ink-2'
 
 export default function Admin({ activePage, setActivePage, user, onLogout }) {
   const [overview, setOverview]         = useState(null)
@@ -64,12 +62,19 @@ export default function Admin({ activePage, setActivePage, user, onLogout }) {
 
   if (!isAdmin) {
     return (
-      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: BG_BASE }}>
+      <div className="flex h-screen overflow-hidden bg-bg">
         <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', color: `${GOLD}88`, fontFamily: "'JetBrains Mono', monospace" }}>
-            <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px' }}>🔒 Admin access required</p>
-            <p style={{ fontSize: '12px' }}>This dashboard is restricted to NeuralIQ admins.</p>
+        <div className="flex flex-1 items-center justify-center px-6">
+          <div className="text-center">
+            <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-sunken text-ink-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+                strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <p className="text-[15px] font-medium text-ink">Admin access required</p>
+            <p className="mt-1 text-sm text-ink-2">This dashboard is restricted to {BRAND_NAME} admins.</p>
           </div>
         </div>
       </div>
@@ -77,222 +82,197 @@ export default function Admin({ activePage, setActivePage, user, onLogout }) {
   }
 
   const statCards = overview ? [
-    { label: 'Total Revenue', value: rupees(overview.totalRevenuePaise), accent: '#6ee7b7' },
-    { label: 'Active Pro Users', value: overview.activeProUsers.toLocaleString(), accent: '#c4b5fd' },
-    { label: 'Total Users', value: overview.totalUsers.toLocaleString(), accent: GOLD },
-    { label: 'Conversion Rate', value: `${overview.conversionRatePercent}%`, accent: '#67e8f9' },
-    { label: 'Failed Payments', value: overview.failedPaymentsCount.toLocaleString(), accent: overview.failedPaymentsCount > 0 ? '#fca5a5' : GOLD },
-    { label: 'Failed Payment Rate', value: `${overview.failedPaymentRatePercent}%`, accent: overview.failedPaymentRatePercent > 10 ? '#fca5a5' : GOLD },
-    { label: 'ARPU (paying users)', value: rupees(overview.arpuPaise), accent: GOLD },
+    { label: 'Total Revenue',       value: rupees(overview.totalRevenuePaise),            danger: false },
+    { label: 'Active Pro Users',    value: overview.activeProUsers.toLocaleString(),       danger: false },
+    { label: 'Total Users',         value: overview.totalUsers.toLocaleString(),           danger: false },
+    { label: 'Conversion Rate',     value: `${overview.conversionRatePercent}%`,           danger: false },
+    { label: 'Failed Payments',     value: overview.failedPaymentsCount.toLocaleString(),  danger: overview.failedPaymentsCount > 0 },
+    { label: 'Failed Payment Rate', value: `${overview.failedPaymentRatePercent}%`,        danger: overview.failedPaymentRatePercent > 10 },
+    { label: 'ARPU (paying users)', value: rupees(overview.arpuPaise),                     danger: false },
   ] : []
 
+  const tick = { fill: 'rgb(var(--c-ink-2))', fontSize: 11 }
+
   return (
-    <div style={{
-      display: 'flex', height: '100vh', overflow: 'hidden',
-      background: `radial-gradient(ellipse 120% 80% at 30% 20%, #0f2016 0%, ${BG_BASE} 60%)`,
-      fontFamily: "'Inter', sans-serif",
-    }}>
+    <div className="flex h-screen overflow-hidden bg-bg">
       <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
-        <div style={{ marginBottom: '28px' }}>
-          <h1 style={{ fontSize: '27px', fontWeight: 800, color: 'white', letterSpacing: '-0.03em' }}>
-            Admin Billing Dashboard
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,0.32)', marginTop: '7px', fontSize: '14px' }}>
-            Revenue, subscriptions, and payment activity across NeuralIQ
-          </p>
-        </div>
+      <div className="page-enter flex-1 overflow-y-auto px-5 pb-10 pt-16 md:px-10 md:pt-9">
+        <div className="mx-auto max-w-6xl">
 
-        {errorMsg && (
-          <div style={{
-            padding: '14px 18px', borderRadius: '12px', marginBottom: '24px',
-            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-            color: '#fca5a5', fontSize: '13px', fontWeight: 600,
-          }}>
-            ⚠️ {errorMsg}
+          <div className="mb-8">
+            <h1 className="font-display text-4xl tracking-tight text-ink">Admin Billing Dashboard</h1>
+            <p className="mt-2 text-sm text-ink-2">
+              Revenue, subscriptions, and payment activity across {BRAND_NAME}
+            </p>
           </div>
-        )}
 
-        {/* ── Stat cards ────────────────────────────────────── */}
-        {loading ? (
-          <p style={{ color: `${GOLD}88`, fontSize: '13px' }}>Loading billing overview…</p>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '14px', marginBottom: '30px' }}>
-            {statCards.map((c) => (
-              <div key={c.label} style={{
-                background: BG_CARD, border: BORDER_GOLD.replace(GOLD, `${GOLD}33`), borderRadius: '14px',
-                padding: '18px 20px', backdropFilter: 'blur(12px)',
-              }}>
-                <p style={{ fontSize: '11px', color: `${GOLD}77`, fontFamily: "'JetBrains Mono', monospace", marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {c.label}
-                </p>
-                <p style={{ fontSize: '24px', fontWeight: 800, color: c.accent, fontFamily: "'JetBrains Mono', monospace" }}>
-                  {c.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+          {errorMsg && (
+            <div role="alert" className="mb-6 flex items-center gap-2.5 rounded-lg border border-danger/25 bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+                strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              {errorMsg}
+            </div>
+          )}
 
-        {/* ── Monthly revenue chart ────────────────────────── */}
-        <div style={{
-          background: BG_CARD, border: `1px solid ${GOLD}22`, borderRadius: '16px',
-          padding: '22px', marginBottom: '30px', backdropFilter: 'blur(12px)',
-        }}>
-          <h2 style={{ fontSize: '15px', fontWeight: 700, color: GOLD, marginBottom: '16px', fontFamily: "'JetBrains Mono', monospace" }}>
-            Monthly Revenue (last 6 months)
-          </h2>
-          <div style={{ width: '100%', height: 260 }}>
-            <ResponsiveContainer>
-              <BarChart data={chart} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={`${GOLD}18`} />
-                <XAxis dataKey="label" tick={{ fill: `${GOLD}88`, fontSize: 11 }} axisLine={{ stroke: `${GOLD}33` }} tickLine={false} />
-                <YAxis tick={{ fill: `${GOLD}88`, fontSize: 11 }} axisLine={{ stroke: `${GOLD}33` }} tickLine={false} tickFormatter={(v) => `₹${v}`} />
-                <Tooltip
-                  formatter={(value) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
-                  contentStyle={{ background: '#0f1a12', border: `1px solid ${GOLD}55`, borderRadius: '8px', fontSize: '12px' }}
-                  labelStyle={{ color: GOLD }}
-                />
-                <Bar dataKey="revenue" fill={GOLD} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* ── Transactions table ───────────────────────────── */}
-        <div style={{
-          background: BG_CARD, border: `1px solid ${GOLD}22`, borderRadius: '16px',
-          padding: '22px', backdropFilter: 'blur(12px)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h2 style={{ fontSize: '15px', fontWeight: 700, color: GOLD, fontFamily: "'JetBrains Mono', monospace" }}>
-              Recent Transactions
-            </h2>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {['paid', 'failed'].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStatusFilter(s)}
-                  style={{
-                    padding: '6px 14px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
-                    textTransform: 'capitalize', cursor: 'pointer',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    background: statusFilter === s ? `${GOLD}22` : 'transparent',
-                    color: statusFilter === s ? GOLD : `${GOLD}55`,
-                    border: `1px solid ${statusFilter === s ? GOLD + '66' : GOLD + '22'}`,
-                  }}
-                >
-                  {s}
-                </button>
+          {/* ── Stat cards ── */}
+          {loading ? (
+            <p className="text-sm text-ink-2">Loading billing overview…</p>
+          ) : (
+            <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {statCards.map((c) => (
+                <div key={c.label} className={cardCls}>
+                  <p className="text-xs font-medium uppercase tracking-wider text-ink-2">{c.label}</p>
+                  <p className={`mt-2 font-display text-3xl leading-none tracking-tight tabular-nums ${
+                    c.danger ? 'text-danger' : 'text-ink'
+                  }`}>
+                    {c.value}
+                  </p>
+                </div>
               ))}
             </div>
+          )}
+
+          {/* ── Monthly revenue chart ── */}
+          <div className={`${cardCls} mb-6`}>
+            <h2 className="mb-4 text-sm font-medium text-ink">Monthly Revenue (last 6 months)</h2>
+            <div className="h-[260px] w-full">
+              <ResponsiveContainer>
+                <BarChart data={chart} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--c-line))" vertical={false} />
+                  <XAxis dataKey="label" tick={tick} axisLine={{ stroke: 'rgb(var(--c-line-strong))' }} tickLine={false} />
+                  <YAxis tick={tick} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} />
+                  <Tooltip
+                    cursor={{ fill: 'rgb(var(--c-sunken))' }}
+                    formatter={(value) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
+                    contentStyle={{
+                      background: 'rgb(var(--c-surface))',
+                      border: '1px solid rgb(var(--c-line-strong))',
+                      borderRadius: '8px', fontSize: '12px',
+                      color: 'rgb(var(--c-ink))',
+                    }}
+                    labelStyle={{ color: 'rgb(var(--c-ink-2))' }}
+                  />
+                  <Bar dataKey="revenue" fill="rgb(var(--c-accent))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          {txnLoading ? (
-            <p style={{ color: `${GOLD}66`, fontSize: '13px' }}>Loading transactions…</p>
-          ) : transactions.length === 0 ? (
-            <p style={{ color: `${GOLD}66`, fontSize: '13px' }}>No {statusFilter} transactions yet.</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${GOLD}22` }}>
-                    {['User', 'Plan', 'Amount', 'Status', 'Date', 'Receipt'].map(h => (
-                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: `${GOLD}77`, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((txn) => (
-                    <tr key={txn._id} style={{ borderBottom: `1px solid ${GOLD}11` }}>
-                      <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.85)' }}>
-                        {txn.userId?.name || 'Unknown'}
-                        <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px' }}>{txn.userId?.email}</div>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.7)', textTransform: 'capitalize' }}>{txn.plan}</td>
-                      <td style={{ padding: '10px 12px', color: GOLD, fontFamily: "'JetBrains Mono', monospace" }}>{rupees(txn.amount)}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{
-                          padding: '2px 9px', borderRadius: '999px', fontSize: '10.5px', fontWeight: 700,
-                          background: txn.status === 'paid' ? 'rgba(16,185,129,0.14)' : 'rgba(239,68,68,0.14)',
-                          color: txn.status === 'paid' ? '#6ee7b7' : '#fca5a5',
-                        }}>
-                          {txn.status.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.5)' }}>
-                        {new Date(txn.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td style={{ padding: '10px 12px', color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px' }}>
-                        {txn.receiptNumber || '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* ── Transactions table ── */}
+          <div className={`${cardCls} mb-6`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-medium text-ink">Recent Transactions</h2>
+              <div className="inline-flex rounded-md border border-line bg-sunken p-0.5">
+                {['paid', 'failed'].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setStatusFilter(s)}
+                    className={`rounded px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                      statusFilter === s
+                        ? 'bg-surface text-ink shadow-card'
+                        : 'text-ink-2 hover:text-ink'
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* ── Audit log ─────────────────────────────────────── */}
-        <div style={{
-          background: BG_CARD, border: `1px solid ${GOLD}22`, borderRadius: '16px',
-          padding: '22px', marginTop: '30px', backdropFilter: 'blur(12px)',
-        }}>
-          <h2 style={{ fontSize: '15px', fontWeight: 700, color: GOLD, marginBottom: '16px', fontFamily: "'JetBrains Mono', monospace" }}>
-            Recent Audit Log
-          </h2>
-
-          {auditLoading ? (
-            <p style={{ color: `${GOLD}66`, fontSize: '13px' }}>Loading audit log…</p>
-          ) : auditLogs.length === 0 ? (
-            <p style={{ color: `${GOLD}66`, fontSize: '13px' }}>No events recorded yet.</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${GOLD}22` }}>
-                    {['Event', 'User', 'IP Address', 'When'].map(h => (
-                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: `${GOLD}77`, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditLogs.map((log) => (
-                    <tr key={log._id} style={{ borderBottom: `1px solid ${GOLD}11` }}>
-                      <td style={{ padding: '9px 12px' }}>
-                        <span style={{
-                          padding: '2px 9px', borderRadius: '999px', fontSize: '10px', fontWeight: 700,
-                          fontFamily: "'JetBrains Mono', monospace",
-                          background: log.eventType.includes('failed') || log.eventType.includes('invalid') || log.eventType.includes('denied')
-                            ? 'rgba(239,68,68,0.14)' : 'rgba(197,160,89,0.14)',
-                          color: log.eventType.includes('failed') || log.eventType.includes('invalid') || log.eventType.includes('denied')
-                            ? '#fca5a5' : GOLD,
-                        }}>
-                          {log.eventType}
-                        </span>
-                      </td>
-                      <td style={{ padding: '9px 12px', color: 'rgba(255,255,255,0.75)' }}>
-                        {log.userId?.name || '—'}
-                        {log.userId?.email && <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10.5px' }}>{log.userId.email}</div>}
-                      </td>
-                      <td style={{ padding: '9px 12px', color: 'rgba(255,255,255,0.5)', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px' }}>
-                        {log.ipAddress || '—'}
-                      </td>
-                      <td style={{ padding: '9px 12px', color: 'rgba(255,255,255,0.5)' }}>
-                        {new Date(log.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </td>
+            {txnLoading ? (
+              <p className="text-sm text-ink-2">Loading transactions…</p>
+            ) : transactions.length === 0 ? (
+              <p className="text-sm text-ink-2">No {statusFilter} transactions yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-[13px]">
+                  <thead>
+                    <tr className="border-b border-line">
+                      {['User', 'Plan', 'Amount', 'Status', 'Date', 'Receipt'].map(h => (
+                        <th key={h} className={thCls}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {transactions.map((txn) => (
+                      <tr key={txn._id}>
+                        <td className="px-3 py-3 text-ink">
+                          {txn.userId?.name || 'Unknown'}
+                          <div className="text-xs text-ink-2">{txn.userId?.email}</div>
+                        </td>
+                        <td className="px-3 py-3 capitalize text-ink-2">{txn.plan}</td>
+                        <td className="px-3 py-3 font-medium text-ink tabular-nums">{rupees(txn.amount)}</td>
+                        <td className="px-3 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            txn.status === 'paid' ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'
+                          }`}>
+                            {txn.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-ink-2">
+                          {new Date(txn.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-3 py-3 font-mono text-xs text-ink-2">
+                          {txn.receiptNumber || '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ── Audit log ── */}
+          <div className={cardCls}>
+            <h2 className="mb-4 text-sm font-medium text-ink">Recent Audit Log</h2>
+
+            {auditLoading ? (
+              <p className="text-sm text-ink-2">Loading audit log…</p>
+            ) : auditLogs.length === 0 ? (
+              <p className="text-sm text-ink-2">No events recorded yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-[13px]">
+                  <thead>
+                    <tr className="border-b border-line">
+                      {['Event', 'User', 'IP Address', 'When'].map(h => (
+                        <th key={h} className={thCls}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {auditLogs.map((log) => {
+                      const bad = log.eventType.includes('failed') || log.eventType.includes('invalid') || log.eventType.includes('denied')
+                      return (
+                        <tr key={log._id}>
+                          <td className="px-3 py-2.5">
+                            <span className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-medium ${
+                              bad ? 'bg-danger-soft text-danger' : 'bg-sunken text-ink-2'
+                            }`}>
+                              {log.eventType}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-ink">
+                            {log.userId?.name || '—'}
+                            {log.userId?.email && <div className="text-xs text-ink-2">{log.userId.email}</div>}
+                          </td>
+                          <td className="px-3 py-2.5 font-mono text-xs text-ink-2">{log.ipAddress || '—'}</td>
+                          <td className="px-3 py-2.5 text-ink-2">
+                            {new Date(log.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     </div>

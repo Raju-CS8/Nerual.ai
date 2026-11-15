@@ -7,114 +7,71 @@ import jsPDF from 'jspdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import { saveAs } from 'file-saver'
 
-// ✅ Markdown renderer — logic preserved exactly
+const BRAND_NAME = 'Mural'
+const AI_NAME = `${BRAND_NAME} AI`
+
+const Icon = ({ size = 14, children }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {children}
+  </svg>
+)
+
+const btnPrimary =
+  'inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3.5 py-2 text-[13px] font-medium ' +
+  'text-accent-on transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50'
+
+const btnGhost =
+  'inline-flex items-center gap-1.5 rounded-md border border-line-strong bg-surface px-3 py-2 text-xs font-medium ' +
+  'text-ink-2 transition-colors hover:bg-sunken hover:text-ink disabled:cursor-not-allowed disabled:opacity-50'
+
+// ✅ Markdown renderer — logic preserved exactly (only styling changed)
 const MarkdownMessage = ({ content }) => (
-  <div style={{ color: 'rgba(240,238,255,0.88)', fontSize: '13.5px', lineHeight: '1.72' }}>
+  <div className="text-[14px] leading-[1.7] text-ink">
     <ReactMarkdown
-  remarkPlugins={[remarkGfm]}
-  components={{
-    code: ({ inline, children, ...props }) => inline
-      ? <code
-          style={{
-            padding: '2px 7px',
-            borderRadius: '5px',
-            fontSize: '12px',
-            fontFamily: 'JetBrains Mono, monospace',
-            background: 'rgba(124,58,237,0.22)',
-            color: '#ddd6fe'
-          }}
-          {...props}
-        >
-          {children}
-        </code>
-      : <pre
-          style={{
-            padding: '14px 16px',
-            borderRadius: '10px',
-            overflowX: 'auto',
-            margin: '10px 0',
-            background: 'rgba(0,0,0,0.38)',
-            border: '1px solid rgba(255,255,255,0.07)'
-          }}
-        >
-          <code
-            style={{
-              fontSize: '12px',
-              fontFamily: 'JetBrains Mono, monospace',
-              color: '#86efac'
-            }}
-            {...props}
-          >
-            {children}
-          </code>
-        </pre>,
+      remarkPlugins={[remarkGfm]}
+      components={{
+        code: ({ inline, children, ...props }) => inline
+          ? <code {...props} className="rounded bg-sunken px-1.5 py-0.5 font-mono text-[12.5px] text-ink">
+              {children}
+            </code>
+          : <pre className="my-3 overflow-x-auto rounded-lg border border-line bg-sunken p-4">
+              <code {...props} className="font-mono text-[12.5px] text-ink">
+                {children}
+              </code>
+            </pre>,
 
-    p: ({ children }) =>
-      <p style={{ marginBottom: '8px' }}>{children}</p>,
+        p:  ({ children }) => <p className="mb-2.5 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="mb-2.5 list-disc pl-5">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2.5 list-decimal pl-5">{children}</ol>,
+        li: ({ children }) => <li className="mb-1">{children}</li>,
+        strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
 
-    ul: ({ children }) =>
-      <ul style={{ paddingLeft: '18px', marginBottom: '8px' }}>{children}</ul>,
+        h1: ({ children }) => <h1 className="mb-2 mt-4 font-display text-2xl tracking-tight text-ink">{children}</h1>,
+        h2: ({ children }) => <h2 className="mb-2 mt-4 text-[16px] font-semibold text-ink">{children}</h2>,
+        h3: ({ children }) => <h3 className="mb-1.5 mt-3 text-[14px] font-semibold text-ink">{children}</h3>,
 
-    ol: ({ children }) =>
-      <ol style={{ paddingLeft: '18px', marginBottom: '8px' }}>{children}</ol>,
-
-    li: ({ children }) =>
-      <li style={{ marginBottom: '3px' }}>{children}</li>,
-
-    strong: ({ children }) =>
-      <strong style={{ color: 'white', fontWeight: 600 }}>{children}</strong>,
-
-    h1: ({ children }) =>
-      <h1 style={{
-        fontSize: '17px',
-        fontWeight: 700,
-        color: 'white',
-        marginBottom: '8px'
-      }}>
-        {children}
-      </h1>,
-
-    h2: ({ children }) =>
-      <h2 style={{
-        fontSize: '15px',
-        fontWeight: 700,
-        color: 'white',
-        marginBottom: '6px'
-      }}>
-        {children}
-      </h2>,
-
-    h3: ({ children }) =>
-      <h3 style={{
-        fontSize: '13px',
-        fontWeight: 600,
-        color: 'white',
-        marginBottom: '5px'
-      }}>
-        {children}
-      </h3>,
-
-    table: ({ children }) =>
-      <table style={{
-        width: '100%',
-        borderCollapse: 'collapse',
-        margin: '12px 0'
-      }}>
-        {children}
-      </table>,
-
-    th: ({ children }) =>
-      <th style={{
-        padding: '8px',
-        textAlign: 'left',
-        borderBottom: '1px solid rgba(255,255,255,0.2)'
-      }}>
-        {children}
-      </th>,
-  }}
->
-  {content}
-</ReactMarkdown>
+        table: ({ children }) => (
+          <div className="my-3 overflow-x-auto">
+            <table className="w-full border-collapse text-[13px]">{children}</table>
+          </div>
+        ),
+        th: ({ children }) => (
+          <th className="border-b border-line-strong px-2.5 py-2 text-left font-medium text-ink">{children}</th>
+        ),
+        td: ({ children }) => (
+          <td className="border-b border-line px-2.5 py-2 text-ink-2">{children}</td>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="my-3 border-l-2 border-line-strong pl-3 text-ink-2">{children}</blockquote>
+        ),
+        a: ({ children, ...props }) => (
+          <a {...props} className="text-accent underline underline-offset-2 hover:text-accent-hover">{children}</a>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
   </div>
 )
 
@@ -130,10 +87,10 @@ const timeAgo = (date) => {
   return 'Just now'
 }
 
-export default function Chat({ activePage, setActivePage, user }) {
+export default function Chat({ activePage, setActivePage, user, onLogout }) {
   // ✅ All state preserved exactly
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: `Hello ${user?.name || 'there'}! I am NEURALIQ AI. How can I help you today?` }
+    { role: 'assistant', content: `Hello ${user?.name || 'there'}! I am ${AI_NAME}. How can I help you today?` }
   ])
   const [input, setInput]               = useState('')
   const [loading, setLoading]           = useState(false)
@@ -167,7 +124,7 @@ export default function Chat({ activePage, setActivePage, user }) {
 
   const startNewChat = () => {
     setChatId(null)
-    setMessages([{ role: 'assistant', content: `Hello ${user?.name || 'there'}! I am NEURALIQ AI. How can I help you today?` }])
+    setMessages([{ role: 'assistant', content: `Hello ${user?.name || 'there'}! I am ${AI_NAME}. How can I help you today?` }])
   }
 
   const handleRename = async (id) => {
@@ -185,7 +142,7 @@ export default function Chat({ activePage, setActivePage, user }) {
       setConversations(prev => prev.filter(c => c._id !== id))
       if (chatId === id) {
         setChatId(null)
-        setMessages([{ role: 'assistant', content: `Hello ${user?.name || 'there'}! I am NEURALIQ AI. How can I help you today?` }])
+        setMessages([{ role: 'assistant', content: `Hello ${user?.name || 'there'}! I am ${AI_NAME}. How can I help you today?` }])
       }
     } catch { console.log('Could not delete chat') }
   }
@@ -220,29 +177,29 @@ export default function Chat({ activePage, setActivePage, user }) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
 
-  // ✅ Export logic preserved exactly
+  // ✅ Export logic preserved exactly (brand text + colors updated)
   const exportAsPDF = async () => {
     setExporting(true); setShowExportMenu(false)
     try {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
       const pageWidth = pdf.internal.pageSize.getWidth()
       const margin = 15; const maxWidth = pageWidth - margin * 2; let y = 20
-      pdf.setFontSize(20); pdf.setTextColor(124, 58, 237)
-      pdf.text('NEURALIQ. Chat Export', margin, y); y += 8
+      pdf.setFontSize(20); pdf.setTextColor(15, 118, 110)
+      pdf.text(`${BRAND_NAME}. Chat Export`, margin, y); y += 8
       pdf.setFontSize(10); pdf.setTextColor(150, 150, 150)
       pdf.text(`Exported by: ${user?.name} | ${new Date().toLocaleString()}`, margin, y); y += 10
-      pdf.setDrawColor(124, 58, 237); pdf.line(margin, y, pageWidth - margin, y); y += 8
+      pdf.setDrawColor(15, 118, 110); pdf.line(margin, y, pageWidth - margin, y); y += 8
       for (const msg of messages.filter(m => m.role !== 'system')) {
         if (y > 270) { pdf.addPage(); y = 20 }
         pdf.setFontSize(9)
-        pdf.setTextColor(msg.role === 'user' ? 124 : 6, msg.role === 'user' ? 58 : 182, msg.role === 'user' ? 237 : 212)
-        pdf.text(msg.role === 'user' ? `${user?.name}:` : 'NEURALIQ AI:', margin, y); y += 5
+        pdf.setTextColor(msg.role === 'user' ? 15 : 95, msg.role === 'user' ? 118 : 94, msg.role === 'user' ? 110 : 88)
+        pdf.text(msg.role === 'user' ? `${user?.name}:` : `${AI_NAME}:`, margin, y); y += 5
         pdf.setFontSize(10); pdf.setTextColor(50, 50, 50)
         const lines = pdf.splitTextToSize(msg.content, maxWidth)
         for (const line of lines) { if (y > 275) { pdf.addPage(); y = 20 }; pdf.text(line, margin, y); y += 5 }
         y += 4
       }
-      pdf.save(`NEURALIQ-chat-${Date.now()}.pdf`)
+      pdf.save(`${BRAND_NAME.toLowerCase()}-chat-${Date.now()}.pdf`)
     } catch (err) { alert('Export failed: ' + err.message) }
     setExporting(false)
   }
@@ -251,102 +208,59 @@ export default function Chat({ activePage, setActivePage, user }) {
     setExporting(true); setShowExportMenu(false)
     try {
       const docChildren = [
-        new Paragraph({ text: 'NEURALIQ. Chat Export', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: `${BRAND_NAME}. Chat Export`, heading: HeadingLevel.HEADING_1 }),
         new Paragraph({ children: [new TextRun({ text: `Exported by: ${user?.name} | ${new Date().toLocaleString()}`, color: '888888', size: 20 })] }),
         new Paragraph({ text: '' }),
       ]
       for (const msg of messages.filter(m => m.role !== 'system')) {
         docChildren.push(
-          new Paragraph({ children: [new TextRun({ text: msg.role === 'user' ? `${user?.name}:` : 'NEURALIQ AI:', bold: true, color: msg.role === 'user' ? '7c3aed' : '06b6d4', size: 22 })] }),
+          new Paragraph({ children: [new TextRun({ text: msg.role === 'user' ? `${user?.name}:` : `${AI_NAME}:`, bold: true, color: msg.role === 'user' ? '0F766E' : '5F5E58', size: 22 })] }),
           new Paragraph({ children: [new TextRun({ text: msg.content, size: 22 })] }),
           new Paragraph({ text: '' }),
         )
       }
       const doc = new Document({ sections: [{ children: docChildren }] })
       const blob = await Packer.toBlob(doc)
-      saveAs(blob, `NEURALIQ-chat-${Date.now()}.docx`)
+      saveAs(blob, `${BRAND_NAME.toLowerCase()}-chat-${Date.now()}.docx`)
     } catch (err) { alert('Export failed: ' + err.message) }
     setExporting(false)
   }
 
-  // ── Shared styles ──────────────────────────────────────────
-  const S = {
-    iconBtn: {
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
-    },
-  }
+  const exportItems = [
+    { label: 'Export as PDF',  action: exportAsPDF },
+    { label: 'Export as Word', action: exportAsWord },
+  ]
 
   return (
-    <div style={{
-      display: 'flex', height: '100vh', overflow: 'hidden',
-      background: 'radial-gradient(ellipse 80% 60% at 20% -5%, rgba(124,58,237,0.1) 0%, #08080f 65%)',
-    }}>
-      <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} />
+    <div className="flex h-screen overflow-hidden bg-bg">
+      <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
-      {/* ── Conversation history sidebar ───────────────────── */}
-      <div style={{
-        width: '224px', display: 'flex', flexDirection: 'column', flexShrink: 0,
-        borderRight: '1px solid rgba(255,255,255,0.055)',
-        background: 'rgba(255,255,255,0.012)',
-        padding: '16px 10px',
-        gap: '8px',
-      }}>
+      {/* ── Conversation history ─────────────────────────────── */}
+      <aside className="flex w-56 shrink-0 flex-col gap-2 border-r border-line bg-surface px-2.5 pb-4 pt-16 md:pt-4">
 
-        {/* New chat button */}
-        <button
-          onClick={startNewChat}
-          style={{
-            width: '100%', padding: '10px 14px', borderRadius: '10px', marginBottom: '6px',
-            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: 'white',
-            border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
-            boxShadow: '0 2px 14px rgba(124,58,237,0.32)', transition: 'all 0.15s ease',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-            fontFamily: 'Inter, sans-serif',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = '1';   e.currentTarget.style.transform = 'translateY(0)' }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
+        <button onClick={startNewChat} className={`${btnPrimary} w-full`}>
+          <Icon size={13}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>
           New Chat
         </button>
 
-        {/* Section label */}
-        <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.18)', padding: '0 3px' }}>
-          Recent
-        </p>
+        <p className="px-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-ink-2">Recent</p>
 
-        {/* Conversation list */}
         {conversations.length === 0 ? (
-          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', padding: '6px 3px' }}>
-            No conversations yet
-          </p>
+          <p className="px-1 py-1.5 text-xs text-ink-2">No conversations yet</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, overflowY: 'auto' }}>
+          <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
             {conversations.map((c) => {
               const isActive = c._id === chatId
               return (
                 <div
                   key={c._id}
-                  style={{
-                    position: 'relative', borderRadius: '9px', transition: 'all 0.15s ease',
-                    border: isActive ? '1px solid rgba(124,58,237,0.32)' : '1px solid transparent',
-                    background: isActive ? 'rgba(124,58,237,0.12)' : 'transparent',
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }
-                    e.currentTarget.querySelector('.c-actions').style.opacity = '1'
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }
-                    e.currentTarget.querySelector('.c-actions').style.opacity = '0'
-                  }}
+                  className={`group relative rounded-md border transition-colors ${
+                    isActive ? 'border-accent/25 bg-accent-soft' : 'border-transparent hover:bg-sunken'
+                  }`}
                 >
                   <button
                     onClick={() => loadChat(c._id)}
-                    style={{ width: '100%', textAlign: 'left', padding: '10px 36px 10px 10px', background: 'none', border: 'none', cursor: 'pointer' }}
+                    className="w-full py-2 pl-2.5 pr-14 text-left"
                   >
                     {renamingId === c._id ? (
                       <input
@@ -354,44 +268,38 @@ export default function Chat({ activePage, setActivePage, user }) {
                         onChange={(e) => setRenameValue(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') handleRename(c._id); if (e.key === 'Escape') setRenamingId(null) }}
                         onBlur={() => handleRename(c._id)}
-                        style={{ width: '100%', fontSize: '12px', color: 'white', background: 'transparent', outline: 'none', borderBottom: '1px solid rgba(124,58,237,0.5)', fontFamily: 'Inter, sans-serif' }}
+                        className="w-full border-b border-accent bg-transparent text-[13px] text-ink outline-none"
                         autoFocus onClick={(e) => e.stopPropagation()}
                       />
                     ) : (
-                      <p style={{ fontSize: '12px', fontWeight: 500, color: isActive ? '#c4b5fd' : 'rgba(255,255,255,0.62)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p className={`truncate text-[13px] font-medium ${isActive ? 'text-accent' : 'text-ink'}`}>
                         {c.title}
                       </p>
                     )}
-                    <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.24)', marginTop: '3px' }}>
-                      {timeAgo(c.updatedAt)}
-                    </p>
+                    <p className="mt-0.5 text-[11px] text-ink-2">{timeAgo(c.updatedAt)}</p>
                   </button>
 
                   {/* Rename / Delete actions */}
-                  <div className="c-actions" style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: '2px', opacity: 0, transition: 'opacity 0.15s ease' }}>
+                  <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                     <button
                       onClick={(e) => { e.stopPropagation(); setRenamingId(c._id); setRenameValue(c.title) }}
-                      style={{ ...S.iconBtn, width: '22px', height: '22px', borderRadius: '5px', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}
-                      title="Rename"
-                      onMouseEnter={e => e.currentTarget.style.color = '#c4b5fd'}
-                      onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+                      className="flex h-6 w-6 items-center justify-center rounded text-ink-2 transition-colors hover:bg-line hover:text-ink"
+                      title="Rename" aria-label="Rename chat"
                     >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <Icon size={12}>
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
+                      </Icon>
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteChat(c._id) }}
-                      style={{ ...S.iconBtn, width: '22px', height: '22px', borderRadius: '5px', background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
-                      title="Delete"
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                      className="flex h-6 w-6 items-center justify-center rounded text-ink-2 transition-colors hover:bg-danger-soft hover:text-danger"
+                      title="Delete" aria-label="Delete chat"
                     >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <Icon size={12}>
                         <polyline points="3 6 5 6 21 6"/>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                      </svg>
+                      </Icon>
                     </button>
                   </div>
                 </div>
@@ -399,77 +307,49 @@ export default function Chat({ activePage, setActivePage, user }) {
             })}
           </div>
         )}
-      </div>
+      </aside>
 
-      {/* ── Main chat panel ────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* ── Main chat panel ──────────────────────────────────── */}
+      <div className="flex flex-1 flex-col overflow-hidden">
 
         {/* Header */}
-        <div style={{
-          padding: '16px 28px', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid rgba(255,255,255,0.055)',
-          background: 'rgba(255,255,255,0.01)',
-        }}>
+        <div className="flex shrink-0 items-center justify-between border-b border-line px-6 py-4">
           <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'white', letterSpacing: '-0.025em' }}>
-              AI Chat
-            </h1>
-            <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '12px', marginTop: '2px' }}>
-              {user?.name || 'User'} · GPT-OSS 120B via Groq
+            <h1 className="font-display text-2xl leading-none tracking-tight text-ink">AI Chat</h1>
+            <p className="mt-1.5 text-xs text-ink-2">
+              {user?.name || 'User'} • GPT-OSS 120B via Groq
             </p>
           </div>
 
           {/* Export */}
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
               disabled={messages.length <= 1}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '7px',
-                padding: '8px 16px', borderRadius: '9px', fontSize: '12px', fontWeight: 600,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
-                color: messages.length <= 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.62)',
-                cursor: messages.length <= 1 ? 'not-allowed' : 'pointer',
-                transition: 'all 0.15s ease', fontFamily: 'Inter, sans-serif',
-              }}
-              onMouseEnter={e => { if (messages.length > 1) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'white' }}}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = messages.length <= 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.62)' }}
+              className={btnGhost}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <Icon size={13}>
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
+              </Icon>
               {exporting ? 'Exporting…' : 'Export'}
             </button>
 
             {showExportMenu && (
-              <div style={{
-                position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 50,
-                background: '#13132a', border: '1px solid rgba(124,58,237,0.28)',
-                borderRadius: '12px', overflow: 'hidden', minWidth: '172px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
-              }}>
-                {[
-                  { label: 'Export as PDF',  action: exportAsPDF,  color: '#f87171' },
-                  { label: 'Export as Word', action: exportAsWord, color: '#93c5fd' },
-                ].map((item, i) => (
-                  <button key={i} onClick={item.action}
-                    style={{
-                      width: '100%', padding: '11px 16px', textAlign: 'left',
-                      fontSize: '13px', color: 'rgba(255,255,255,0.78)',
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '9px',
-                      fontFamily: 'Inter, sans-serif', transition: 'background 0.12s ease',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.055)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              <div className="absolute right-0 top-full z-50 mt-2 min-w-[176px] overflow-hidden rounded-lg border border-line bg-surface shadow-pop">
+                {exportItems.map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={item.action}
+                    className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[13px] text-ink transition-colors hover:bg-sunken"
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={item.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
+                    <span className="text-ink-2">
+                      <Icon size={13}>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </Icon>
+                    </span>
                     {item.label}
                   </button>
                 ))}
@@ -479,114 +359,68 @@ export default function Chat({ activePage, setActivePage, user }) {
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              style={{ display: 'flex', gap: '12px', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}
-              className="fade-in"
-            >
-              {/* Avatar */}
-              <div style={{
-                width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                background: msg.role === 'user'
-                  ? 'rgba(124,58,237,0.22)'
-                  : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                border: '2px solid rgba(124,58,237,0.28)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: '13px', color: 'white',
-              }}>
-                {msg.role === 'user' ? (
-                  user?.name?.[0]?.toUpperCase() || '?'
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.14Z"/>
-                    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.14Z"/>
-                  </svg>
-                )}
-              </div>
+        <div className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="mx-auto flex max-w-3xl flex-col gap-7">
+            {messages.map((msg, i) => (
+              <div key={i} className="fade-in flex gap-3.5">
+                {/* Avatar */}
+                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                  msg.role === 'user' ? 'bg-sunken text-ink-2' : 'bg-accent text-accent-on'
+                }`}>
+                  {msg.role === 'user'
+                    ? (user?.name?.[0]?.toUpperCase() || '?')
+                    : <span className="font-display text-[15px] leading-none">{BRAND_NAME.charAt(0)}</span>}
+                </div>
 
-              {/* Bubble */}
-              <div style={{
-                maxWidth: '600px',
-                padding: '14px 18px',
-                borderRadius: msg.role === 'user' ? '18px 5px 18px 18px' : '5px 18px 18px 18px',
-                background: msg.role === 'user'
-                  ? 'rgba(124,58,237,0.16)'
-                  : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${msg.role === 'user' ? 'rgba(124,58,237,0.26)' : 'rgba(255,255,255,0.07)'}`,
-              }}>
-                <p style={{
-                  fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em',
-                  marginBottom: '7px', textTransform: 'uppercase',
-                  color: msg.role === 'user' ? '#c4b5fd' : '#67e8f9',
-                }}>
-                  {msg.role === 'user' ? (user?.name || 'You') : 'NEURALIQ AI'}
-                </p>
-                {msg.role === 'assistant'
-                  ? <MarkdownMessage content={msg.content} />
-                  : <p style={{ color: 'rgba(240,238,255,0.88)', fontSize: '13.5px', lineHeight: '1.72', whiteSpace: 'pre-wrap' }}>{msg.content}</p>
-                }
+                {/* Content */}
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1.5 text-xs font-medium text-ink-2">
+                    {msg.role === 'user' ? (user?.name || 'You') : AI_NAME}
+                  </p>
+                  {msg.role === 'assistant'
+                    ? <MarkdownMessage content={msg.content} />
+                    : <p className="whitespace-pre-wrap rounded-lg bg-sunken px-4 py-3 text-[14px] leading-[1.7] text-ink">
+                        {msg.content}
+                      </p>
+                  }
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {/* Typing indicator */}
-          {loading && (
-            <div style={{ display: 'flex', gap: '12px' }} className="fade-in">
-              <div style={{
-                width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                border: '2px solid rgba(124,58,237,0.28)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.14Z"/>
-                  <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.14Z"/>
-                </svg>
+            {/* Typing indicator */}
+            {loading && (
+              <div className="fade-in flex gap-3.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-on">
+                  <span className="font-display text-[15px] leading-none">{BRAND_NAME.charAt(0)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 pt-2" aria-label="Thinking">
+                  {[0, 150, 300].map((delay, i) => (
+                    <span
+                      key={i}
+                      className="h-1.5 w-1.5 animate-[bounceDot_1.2s_ease-in-out_infinite] rounded-full bg-ink-2"
+                      style={{ animationDelay: `${delay}ms` }}
+                    />
+                  ))}
+                </div>
               </div>
-              <div style={{
-                padding: '14px 18px', borderRadius: '5px 18px 18px 18px',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-                display: 'flex', alignItems: 'center', gap: '6px',
-              }}>
-                {[0, 150, 300].map((delay, i) => (
-                  <div key={i} style={{
-                    width: '7px', height: '7px', borderRadius: '50%', background: '#7c3aed',
-                    animation: `bounceDot 1.2s ease-in-out ${delay}ms infinite`,
-                  }} />
-                ))}
-              </div>
-            </div>
-          )}
-          <div ref={bottomRef} />
+            )}
+            <div ref={bottomRef} />
+          </div>
         </div>
 
         {/* Input bar */}
-        <div style={{
-          padding: '16px 28px', flexShrink: 0,
-          borderTop: '1px solid rgba(255,255,255,0.055)',
-          background: 'rgba(255,255,255,0.01)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="shrink-0 border-t border-line px-6 py-4">
+          <div className="mx-auto flex max-w-3xl items-center gap-2.5">
 
             {/* File shortcut */}
             <button
               onClick={() => setActivePage('Files')}
               title="Upload a file"
-              style={{
-                flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '11px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600,
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
-                color: 'rgba(255,255,255,0.48)', cursor: 'pointer', transition: 'all 0.15s ease',
-                fontFamily: 'Inter, sans-serif',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.78)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.48)' }}
+              className={`${btnGhost} shrink-0 py-2.5`}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <Icon>
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-              </svg>
+              </Icon>
               File
             </button>
 
@@ -597,42 +431,25 @@ export default function Chat({ activePage, setActivePage, user }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              style={{
-                flex: 1, padding: '11px 18px', borderRadius: '10px', outline: 'none',
-                color: 'white', fontSize: '14px', fontFamily: 'Inter, sans-serif',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
-                transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-              }}
-              onFocus={e => { e.target.style.borderColor = 'rgba(124,58,237,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.08)' }}
-              onBlur={e =>  { e.target.style.borderColor = 'rgba(255,255,255,0.09)'; e.target.style.boxShadow = 'none' }}
+              className="min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-4 py-2.5 text-[14px] text-ink placeholder:text-ink-3 transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             />
 
             {/* Send button */}
             <button
               onClick={sendMessage}
               disabled={loading}
-              style={{
-                flexShrink: 0, display: 'flex', alignItems: 'center', gap: '7px',
-                padding: '11px 22px', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
-                background: loading ? 'rgba(124,58,237,0.32)' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                color: 'white', border: 'none',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 2px 14px rgba(124,58,237,0.36)',
-                transition: 'all 0.15s ease', fontFamily: 'Inter, sans-serif',
-              }}
-              onMouseEnter={e => { if (!loading) { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)' }}}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
+              className={`${btnPrimary} shrink-0 px-5 py-2.5`}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <Icon>
                 <line x1="22" y1="2" x2="11" y2="13"/>
                 <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
+              </Icon>
               Send
             </button>
           </div>
 
-          <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.16)', marginTop: '9px', textAlign: 'center' }}>
-            Enter to send · Shift+Enter for new line
+          <p className="mt-2.5 text-center text-xs text-ink-2">
+            Enter to send • Shift+Enter for new line
           </p>
         </div>
       </div>

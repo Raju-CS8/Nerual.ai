@@ -3,6 +3,20 @@ import Sidebar from '../components/Sidebar'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+const BRAND_NAME = 'Mural'
+const AI_NAME = `${BRAND_NAME} AI`
+
+const Icon = ({ size = 14, children }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {children}
+  </svg>
+)
+
+const btnPrimary =
+  'inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3.5 py-2 text-[13px] font-medium ' +
+  'text-accent-on transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50'
+
 export default function Files({ activePage, setActivePage, user, onLogout }) {
   // ✅ All state preserved exactly
   const [uploading,    setUploading]    = useState(false)
@@ -104,50 +118,35 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
   // ── Quick question suggestions ─────────────────────────────
   const suggestions = ['"Summarize this document"', '"Create flashcards"', '"What are the key points?"', '"Explain section 2"']
 
+  const canAsk = pdfText && !chatLoading
+
   return (
-    <div style={{
-      display: 'flex', height: '100vh', overflow: 'hidden',
-      background: 'radial-gradient(ellipse 80% 60% at 20% -5%, rgba(124,58,237,0.1) 0%, #08080f 65%)',
-    }}>
+    <div className="flex h-screen overflow-hidden bg-bg">
       <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="flex flex-1 flex-col overflow-hidden">
 
-        {/* ── Header ──────────────────────────────────────── */}
-        <div style={{
-          padding: '20px 32px', flexShrink: 0,
-          borderBottom: '1px solid rgba(255,255,255,0.055)',
-          background: 'rgba(255,255,255,0.01)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
+        {/* ── Header ── */}
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line py-5 pl-16 pr-6 md:px-8">
           <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, color: 'white', letterSpacing: '-0.025em' }}>
-              File Upload
-            </h1>
-            <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '12px', marginTop: '3px' }}>
-              Upload a document and chat with it using AI
-            </p>
+            <h1 className="font-display text-3xl leading-none tracking-tight text-ink">File Upload</h1>
+            <p className="mt-2 text-[13px] text-ink-2">Upload a document and chat with it using AI</p>
           </div>
           {/* File type badges */}
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div className="hidden gap-1.5 sm:flex">
             {['PDF', 'DOCX', 'TXT'].map(type => (
-              <span key={type} style={{
-                padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700,
-                background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)', color: '#c4b5fd',
-              }}>{type}</span>
+              <span key={type} className="rounded-full border border-line-strong bg-surface px-2.5 py-1 text-[11px] font-medium text-ink-2">
+                {type}
+              </span>
             ))}
           </div>
         </div>
 
-        {/* ── Body ────────────────────────────────────────── */}
-        <div style={{ flex: 1, display: 'flex', gap: '0', overflow: 'hidden' }}>
+        {/* ── Body ── */}
+        <div className="flex flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
 
           {/* Left panel — upload */}
-          <div style={{
-            width: '300px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px',
-            padding: '20px 16px', borderRight: '1px solid rgba(255,255,255,0.055)',
-            overflowY: 'auto',
-          }}>
+          <div className="flex shrink-0 flex-col gap-3 border-b border-line p-4 lg:w-[300px] lg:overflow-y-auto lg:border-b-0 lg:border-r">
 
             {/* Drop zone */}
             <div
@@ -155,79 +154,69 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
               onDragOver={e => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
-              style={{
-                borderRadius: '16px', padding: '28px 20px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', gap: '12px', cursor: 'pointer',
-                transition: 'all 0.2s ease', minHeight: '200px',
-                background: dragOver ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.025)',
-                border: `2px dashed ${dragOver ? 'rgba(124,58,237,0.7)' : 'rgba(124,58,237,0.3)'}`,
-                boxShadow: dragOver ? '0 0 24px rgba(124,58,237,0.15) inset' : 'none',
-              }}>
-              {/* Upload icon */}
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '14px',
-                background: dragOver ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.1)',
-                border: '1px solid rgba(124,58,237,0.25)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.2s',
-              }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.8)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed px-5 py-7 transition-colors ${
+                dragOver
+                  ? 'border-accent bg-accent-soft'
+                  : 'border-line-strong bg-surface hover:border-accent/50 hover:bg-bg'
+              }`}
+            >
+              <div className={`flex h-12 w-12 items-center justify-center rounded-lg border border-line transition-colors ${
+                dragOver ? 'bg-surface text-accent' : 'bg-sunken text-ink-2'
+              }`}>
+                <Icon size={22}>
                   <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-                </svg>
+                </Icon>
               </div>
 
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ color: 'white', fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>
+              <div className="text-center">
+                <p className="mb-1 text-sm font-medium text-ink">
                   {dragOver ? 'Drop it here!' : 'Drag & drop or browse'}
                 </p>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>
-                  PDF, DOCX, TXT · Max 50MB
-                </p>
+                <p className="text-xs text-ink-2">PDF, DOCX, TXT • Max 50MB</p>
               </div>
 
-              <button style={{
-                padding: '8px 20px', borderRadius: '9px', fontSize: '12px', fontWeight: 700,
-                background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', color: 'white',
-                border: 'none', cursor: 'pointer', boxShadow: '0 2px 12px rgba(124,58,237,0.3)',
-                fontFamily: 'Inter, sans-serif',
-              }}>
+              <button type="button" className={`${btnPrimary} px-5 py-2 text-xs`}>
                 Browse Files
               </button>
 
-              <input ref={fileInputRef} type="file" accept=".pdf,.txt,.docx" style={{ display: 'none' }}
-                onChange={e => handleFile(e.target.files[0])} />
+              <input
+                ref={fileInputRef} type="file" accept=".pdf,.txt,.docx" className="hidden"
+                onChange={e => handleFile(e.target.files[0])}
+              />
             </div>
 
             {/* Upload progress */}
             {uploading && (
-              <div style={{ padding: '16px', borderRadius: '13px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <div className="rounded-lg border border-line bg-surface p-4">
+                <div className="mb-3 flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent">
+                    <Icon size={16}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></Icon>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ color: 'white', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fileName}</p>
-                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', marginTop: '1px' }}>Uploading… {progress}%</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-ink">{fileName}</p>
+                    <p className="mt-px text-[11px] text-ink-2">Uploading… {progress}%</p>
                   </div>
                 </div>
-                <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: '999px', width: `${progress}%`, background: 'linear-gradient(90deg, #7c3aed, #06b6d4)', transition: 'width 0.3s ease' }} />
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-sunken">
+                  <div
+                    className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
               </div>
             )}
 
             {/* File ready */}
             {fileName && !uploading && pdfText && (
-              <div style={{ padding: '14px', borderRadius: '13px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(16,185,129,0.14)', border: '1px solid rgba(16,185,129,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <div className="rounded-lg border border-success/25 bg-success-soft p-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface text-success">
+                    <Icon size={15}><polyline points="20 6 9 17 4 12"/></Icon>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ color: 'white', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fileName}</p>
-                    <p style={{ color: '#6ee7b7', fontSize: '11px', marginTop: '1px' }}>
-                      Ready · {chunks.length > 0 ? `${chunks.length} chunks indexed` : 'Loaded'}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium text-ink">{fileName}</p>
+                    <p className="mt-px text-[11px] text-success">
+                      Ready • {chunks.length > 0 ? `${chunks.length} chunks indexed` : 'Loaded'}
                     </p>
                   </div>
                 </div>
@@ -236,25 +225,23 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
 
             {/* Error */}
             {error && (
-              <div style={{ padding: '12px 14px', borderRadius: '11px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)' }}>
-                <p style={{ fontSize: '12px', color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '7px' }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  {error}
-                </p>
+              <div role="alert" className="flex items-start gap-2 rounded-lg border border-danger/25 bg-danger-soft px-3.5 py-3 text-xs text-danger">
+                <span className="mt-px shrink-0">
+                  <Icon size={13}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></Icon>
+                </span>
+                {error}
               </div>
             )}
 
             {/* Tips */}
             {!pdfText && !uploading && (
-              <div style={{ padding: '16px', borderRadius: '13px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: '11px', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                  Try asking…
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+              <div className="rounded-lg border border-line bg-surface p-4">
+                <p className="mb-2.5 text-[11px] font-medium uppercase tracking-wider text-ink-2">Try asking…</p>
+                <div className="flex flex-col gap-2">
                   {suggestions.map((tip, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(124,58,237,0.5)', flexShrink: 0 }} />
-                      <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '12px' }}>{tip}</p>
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="h-1 w-1 shrink-0 rounded-full bg-accent" />
+                      <p className="text-xs text-ink-2">{tip}</p>
                     </div>
                   ))}
                 </div>
@@ -263,118 +250,109 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
           </div>
 
           {/* Right panel — chat */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="flex min-h-[460px] flex-1 flex-col overflow-hidden">
 
             {/* Chat header */}
-            <div style={{
-              padding: '14px 24px', flexShrink: 0,
-              borderBottom: '1px solid rgba(255,255,255,0.055)',
-              display: 'flex', alignItems: 'center', gap: '12px',
-            }}>
-              <div style={{
-                width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
-                background: 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 2px 10px rgba(124,58,237,0.3)',
-              }}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.14Z"/>
-                  <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.14Z"/>
-                </svg>
+            <div className="flex shrink-0 items-center gap-3 border-b border-line px-6 py-3.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent">
+                <span className="font-display text-xl leading-none text-accent-on">{BRAND_NAME.charAt(0)}</span>
               </div>
-              <div>
-                <p style={{ color: 'white', fontWeight: 700, fontSize: '14px' }}>NEURALIQ AI</p>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', marginTop: '1px' }}>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink">{AI_NAME}</p>
+                <p className="mt-px truncate text-xs text-ink-2">
                   {pdfText ? `Chatting about: ${fileName}` : 'Upload a file to start chatting'}
                 </p>
               </div>
 
-              {/* Status dot */}
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: pdfText ? '#10b981' : 'rgba(255,255,255,0.2)', boxShadow: pdfText ? '0 0 6px #10b981' : 'none' }} />
-                <span style={{ fontSize: '11px', color: pdfText ? '#6ee7b7' : 'rgba(255,255,255,0.25)', fontWeight: 600 }}>
+              {/* Status */}
+              <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${pdfText ? 'bg-success' : 'bg-ink-3'}`} />
+                <span className={`text-xs font-medium ${pdfText ? 'text-success' : 'text-ink-2'}`}>
                   {pdfText ? 'Ready' : 'Waiting'}
                 </span>
               </div>
             </div>
 
             {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <div className="mx-auto flex min-h-full max-w-3xl flex-col gap-6">
 
-              {/* Empty state */}
-              {messages.length === 0 && !uploading && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '14px' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '18px', background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(196,181,253,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                      <line x1="16" y1="13" x2="8" y2="13"/>
-                      <line x1="16" y1="17" x2="8" y2="17"/>
-                      <polyline points="10 9 9 9 8 9"/>
-                    </svg>
+                {/* Empty state */}
+                {messages.length === 0 && !uploading && (
+                  <div className="my-auto flex flex-col items-center gap-3.5 py-10">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-line bg-surface text-ink-2">
+                      <Icon size={26}>
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                      </Icon>
+                    </div>
+                    <div className="text-center">
+                      <p className="mb-1 text-sm font-medium text-ink">No document loaded</p>
+                      <p className="max-w-[260px] text-[13px] leading-relaxed text-ink-2">
+                        Upload a PDF, DOCX, or TXT file and I'll analyze it for you
+                      </p>
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', fontWeight: 600, marginBottom: '5px' }}>No document loaded</p>
-                    <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: '13px', maxWidth: '260px', lineHeight: '1.6' }}>
-                      Upload a PDF, DOCX, or TXT file and I'll analyze it for you
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Analyzing spinner */}
-              {uploading && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '14px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid rgba(124,58,237,0.2)', borderTop: '2px solid #7c3aed', animation: 'spin 0.7s linear infinite' }} />
-                  <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: '13px' }}>Analyzing your document…</p>
-                </div>
-              )}
+                {/* Analyzing spinner */}
+                {uploading && (
+                  <div className="my-auto flex flex-col items-center gap-3.5 py-10">
+                    <div className="h-9 w-9 animate-spin rounded-full border-2 border-line-strong border-t-accent" />
+                    <p className="text-[13px] text-ink-2">Analyzing your document…</p>
+                  </div>
+                )}
 
-              {/* Messages */}
-              {messages.map((msg, i) => (
-                <div key={i} style={{ display: 'flex', gap: '12px', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }} className="fade-in">
-                  <div style={{
-                    width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
-                    background: msg.role === 'user' ? 'rgba(124,58,237,0.22)' : 'linear-gradient(135deg, #7c3aed, #06b6d4)',
-                    border: '2px solid rgba(124,58,237,0.28)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '12px', color: 'white',
-                  }}>
-                    {msg.role === 'user' ? user?.name?.[0]?.toUpperCase() : 'N'}
+                {/* Messages */}
+                {messages.map((msg, i) => (
+                  <div key={i} className="fade-in flex gap-3.5">
+                    <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                      msg.role === 'user' ? 'bg-sunken text-ink-2' : 'bg-accent text-accent-on'
+                    }`}>
+                      {msg.role === 'user'
+                        ? user?.name?.[0]?.toUpperCase()
+                        : <span className="font-display text-[15px] leading-none">{BRAND_NAME.charAt(0)}</span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-1.5 text-xs font-medium text-ink-2">
+                        {msg.role === 'user' ? user?.name : AI_NAME}
+                      </p>
+                      <p className={`whitespace-pre-wrap text-[14px] leading-[1.7] text-ink ${
+                        msg.role === 'user' ? 'rounded-lg bg-sunken px-4 py-3' : ''
+                      }`}>
+                        {msg.content}
+                      </p>
+                    </div>
                   </div>
-                  <div style={{
-                    maxWidth: '72%', padding: '12px 16px',
-                    borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-                    background: msg.role === 'user' ? 'rgba(124,58,237,0.16)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${msg.role === 'user' ? 'rgba(124,58,237,0.26)' : 'rgba(255,255,255,0.07)'}`,
-                  }}>
-                    <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px', color: msg.role === 'user' ? '#c4b5fd' : '#67e8f9' }}>
-                      {msg.role === 'user' ? user?.name : 'NEURALIQ AI'}
-                    </p>
-                    <p style={{ color: 'rgba(240,238,255,0.88)', fontSize: '13px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
-                      {msg.content}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ))}
 
-              {/* Loading dots */}
-              {chatLoading && (
-                <div style={{ display: 'flex', gap: '12px' }} className="fade-in">
-                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: 'white', flexShrink: 0 }}>N</div>
-                  <div style={{ padding: '12px 16px', borderRadius: '4px 16px 16px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {[0, 150, 300].map((delay, i) => (
-                      <div key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#7c3aed', animation: `bounceDot 1.2s ease-in-out ${delay}ms infinite` }} />
-                    ))}
+                {/* Loading dots */}
+                {chatLoading && (
+                  <div className="fade-in flex gap-3.5">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-on">
+                      <span className="font-display text-[15px] leading-none">{BRAND_NAME.charAt(0)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 pt-2" aria-label="Thinking">
+                      {[0, 150, 300].map((delay, i) => (
+                        <span
+                          key={i}
+                          className="h-1.5 w-1.5 animate-[bounceDot_1.2s_ease-in-out_infinite] rounded-full bg-ink-2"
+                          style={{ animationDelay: `${delay}ms` }}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
+                )}
+                <div ref={bottomRef} />
+              </div>
             </div>
 
             {/* Input */}
-            <div style={{ padding: '16px 24px', flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.055)', background: 'rgba(255,255,255,0.01)' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="shrink-0 border-t border-line px-6 py-4">
+              <div className="mx-auto flex max-w-3xl gap-2.5">
                 <input
                   type="text"
                   placeholder={pdfText ? 'Ask anything about your document…' : 'Upload a file first…'}
@@ -382,40 +360,20 @@ export default function Files({ activePage, setActivePage, user, onLogout }) {
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={!pdfText || chatLoading}
-                  style={{
-                    flex: 1, padding: '11px 18px', borderRadius: '10px', outline: 'none',
-                    color: 'white', fontSize: '13.5px', fontFamily: 'Inter, sans-serif',
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
-                    opacity: pdfText ? 1 : 0.45, transition: 'border-color 0.15s, box-shadow 0.15s, opacity 0.2s',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = 'rgba(124,58,237,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.08)' }}
-                  onBlur={e  => { e.target.style.borderColor = 'rgba(255,255,255,0.09)'; e.target.style.boxShadow = 'none' }}
+                  className="min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-4 py-2.5 text-[14px] text-ink placeholder:text-ink-3 transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <button
                   onClick={sendQuestion}
                   disabled={!pdfText || chatLoading}
-                  style={{
-                    padding: '11px 22px', borderRadius: '10px', fontWeight: 700, fontSize: '13px',
-                    color: 'white', border: 'none', fontFamily: 'Inter, sans-serif',
-                    background: pdfText && !chatLoading ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'rgba(124,58,237,0.3)',
-                    cursor: pdfText && !chatLoading ? 'pointer' : 'not-allowed',
-                    boxShadow: pdfText && !chatLoading ? '0 2px 14px rgba(124,58,237,0.32)' : 'none',
-                    opacity: pdfText ? 1 : 0.45, transition: 'all 0.15s',
-                    display: 'flex', alignItems: 'center', gap: '7px',
-                  }}
-                  onMouseEnter={e => { if (pdfText && !chatLoading) { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)' }}}
-                  onMouseLeave={e => { e.currentTarget.style.opacity = pdfText ? '1' : '0.45'; e.currentTarget.style.transform = 'translateY(0)' }}
+                  className={`${btnPrimary} shrink-0 px-5 py-2.5`}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"/>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                  </svg>
+                  <Icon><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></Icon>
                   Ask
                 </button>
               </div>
-              {pdfText && (
-                <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.16)', marginTop: '8px', textAlign: 'center' }}>
-                  Enter to send · Responses powered by GPT-OSS 120B
+              {canAsk !== undefined && pdfText && (
+                <p className="mt-2 text-center text-xs text-ink-2">
+                  Enter to send • Responses powered by GPT-OSS 120B
                 </p>
               )}
             </div>
