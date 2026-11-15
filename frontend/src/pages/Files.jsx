@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-const BRAND_NAME = 'Mural'
+const BRAND_NAME = 'NeuralIQ'
 const AI_NAME = `${BRAND_NAME} AI`
 
 const Icon = ({ size = 14, children }) => (

@@ -11,7 +11,7 @@ import Team from './pages/Team'
 import Admin from './pages/Admin'
 
 // Change this one line if you want a different product name on the loading screen
-const BRAND_NAME = 'Mural'
+const BRAND_NAME = 'NeuralIQ'
 
 function App() {
   // ✅ Reads saved page from localStorage on first load

@@ -7,7 +7,7 @@ import jsPDF from 'jspdf'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import { saveAs } from 'file-saver'
 
-const BRAND_NAME = 'Mural'
+const BRAND_NAME = 'NeuralIQ'
 const AI_NAME = `${BRAND_NAME} AI`
 
 const Icon = ({ size = 14, children }) => (

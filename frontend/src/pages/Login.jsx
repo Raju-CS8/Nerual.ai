@@ -115,7 +115,7 @@ function ProductMock() {
         <p className="text-xs leading-[1.9] text-white/80">
           QA owner confirmed by Friday
           <span className="relative mx-px inline-block align-middle">
-            <span className="absolute -top-4 left-0 whitespace-nowrap rounded-sm rounded-bl-none bg-amber-300 px-1 text-[9px] font-medium text-black">Priya</span>
+            <span className="absolute -top-4 left-0 whitespace-nowrap rounded-sm rounded-bl-none bg-amber-300 px-1 text-[9px] font-medium text-black">Maya</span>
             <span className="block h-3.5 w-0.5 animate-pulse bg-amber-300" />
           </span>
         </p>

@@ -6,7 +6,7 @@ import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 
-const BRAND_NAME = 'Mural'
+const BRAND_NAME = 'NeuralIQ'
 
 // Muted but distinct per-user cursor colors (white label text stays readable)
 const CURSOR_COLORS = ['#0F766E', '#B54708', '#1D4ED8', '#BE185D', '#4D7C0F', '#6D28D9']

@@ -10,7 +10,7 @@ import {
   getUsageSummaryAPI,
 } from '../api'
 
-const BRAND_NAME = 'Mural'
+const BRAND_NAME = 'NeuralIQ'
 
 const Icon = ({ size = 14, children }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"

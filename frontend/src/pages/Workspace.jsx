@@ -9,7 +9,7 @@ import {
   joinWorkspaceAPI, renameWorkspaceAPI, leaveWorkspaceAPI, clearChatHistoryAPI
 } from '../api'
 
-const BRAND_NAME = 'Mural'
+const BRAND_NAME = 'NeuralIQ'
 const AI_NAME = `${BRAND_NAME} AI`
 
 const Icon = ({ size = 14, children }) => (

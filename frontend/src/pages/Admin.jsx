@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import Sidebar from '../components/Sidebar'
 import { getAdminOverviewAPI, getAdminRevenueChartAPI, getAdminTransactionsAPI, getAdminAuditLogsAPI } from '../api'
 
-const BRAND_NAME = 'Mural'
+const BRAND_NAME = 'NeuralIQ'
 
 const rupees = (paise) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
