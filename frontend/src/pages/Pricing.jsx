@@ -10,6 +10,19 @@ import {
   getUsageSummaryAPI,
 } from '../api'
 
+const BRAND_NAME = 'Mural'
+
+const Icon = ({ size = 14, children }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {children}
+  </svg>
+)
+
+const btnPrimary =
+  'inline-flex items-center justify-center gap-2 rounded-md bg-accent px-3.5 py-2 text-[13px] font-medium ' +
+  'text-accent-on transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60'
+
 export default function Pricing({ activePage, setActivePage, user, onLogout }) {
   const [loading,      setLoading]      = useState(false)
   const [success,      setSuccess]      = useState(false)
@@ -83,14 +96,14 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
         key: order.keyId, // public key — safe to expose
         amount: order.amount,
         currency: order.currency,
-        name: 'NeuralIQ',
+        name: BRAND_NAME,
         description: `${proPlan?.name || 'Pro'} Plan — One-Time Payment, Lifetime Access`,
         order_id: order.orderId,
         prefill: {
           name: order.user?.name,
           email: order.user?.email,
         },
-        theme: { color: '#7c3aed' },
+        theme: { color: '#0F766E' },
         handler: async (response) => {
           // 3) Send Razorpay's proof back to our backend, which
           //    recomputes the signature server-side before trusting it.
@@ -192,322 +205,245 @@ export default function Pricing({ activePage, setActivePage, user, onLogout }) {
     features: p.features,
   }))
 
+  const usageHigh = usagePercent >= 80
+
   return (
-    <div style={{
-      display: 'flex', height: '100vh', overflow: 'hidden',
-      background: 'radial-gradient(ellipse 80% 60% at 20% -5%, rgba(124,58,237,0.1) 0%, #08080f 65%)',
-    }}>
+    <div className="flex h-screen overflow-hidden bg-bg">
       <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }} className="page-enter">
+      <div className="page-enter flex-1 overflow-y-auto px-5 pb-12 pt-16 md:px-10 md:pt-9">
+        <div className="mx-auto max-w-3xl">
 
-        {/* ── Header ──────────────────────────────────────── */}
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '27px', fontWeight: 800, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-            Pricing
-          </h1>
-          <p style={{ color: 'rgba(255,255,255,0.32)', marginTop: '7px', fontSize: '14px' }}>
-            Choose the plan that works for you
-          </p>
-        </div>
-
-        {/* ✅ Usage bar for free users */}
-        {!isPro && (
-          <div style={{
-            padding: '18px 22px', borderRadius: '14px', marginBottom: '28px',
-            background: usagePercent >= 80 ? 'rgba(239,68,68,0.07)' : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${usagePercent >= 80 ? 'rgba(239,68,68,0.22)' : 'rgba(255,255,255,0.08)'}`,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <p style={{ color: 'white', fontWeight: 600, fontSize: '13px' }}>Current Usage</p>
-              <p style={{ fontSize: '12px', fontWeight: 700, color: usagePercent >= 80 ? '#fca5a5' : '#c4b5fd' }}>
-                {monthlyTokens.toLocaleString()} / {tokenLimit == null ? '∞' : tokenLimit.toLocaleString()} tokens
-              </p>
-            </div>
-            <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '999px', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', borderRadius: '999px', width: `${usagePercent}%`,
-                background: usagePercent >= 80
-                  ? 'linear-gradient(90deg, #ef4444, #dc2626)'
-                  : 'linear-gradient(90deg, #7c3aed, #06b6d4)',
-                transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
-              }} />
-            </div>
-            {usagePercent >= 80 && (
-              <p style={{ color: '#fca5a5', fontSize: '12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>⚠️</span>
-                You've used {usagePercent.toFixed(0)}% of your free tokens
-              </p>
-            )}
+          {/* ── Header ── */}
+          <div className="mb-8">
+            <h1 className="font-display text-4xl tracking-tight text-ink">Pricing</h1>
+            <p className="mt-1.5 text-sm text-ink-2">Choose the plan that works for you</p>
           </div>
-        )}
 
-        {/* ✅ Success notification — payment done + plan activated */}
-        {success && (
-          <div style={{
-            padding: '16px 20px', borderRadius: '12px', marginBottom: '24px',
-            background: 'rgba(16,185,129,0.09)', border: '1px solid rgba(16,185,129,0.22)',
-          }} className="fade-in">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6ee7b7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              <span style={{ color: '#6ee7b7', fontSize: '13px', fontWeight: 600 }}>
-                {successMsg}
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {paidTxnId && (
-                <button
-                  onClick={() => downloadReceiptAPI(paidTxnId)}
-                  style={{
-                    padding: '8px 14px', borderRadius: '9px', fontSize: '12px', fontWeight: 700,
-                    background: 'rgba(110,231,183,0.12)', color: '#6ee7b7',
-                    border: '1px solid rgba(110,231,183,0.3)', cursor: 'pointer',
-                  }}
-                >
-                  ⬇ Download Receipt (PDF)
-                </button>
-              )}
-              <button
-                onClick={() => window.location.reload()}
-                style={{
-                  padding: '8px 14px', borderRadius: '9px', fontSize: '12px', fontWeight: 700,
-                  background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)',
-                  border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer',
-                }}
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ⚠️ Error notification */}
-        {errorMsg && (
-          <div style={{
-            padding: '14px 18px', borderRadius: '12px', marginBottom: '24px',
-            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-            color: '#fca5a5', fontSize: '13px', fontWeight: 600,
-          }} className="fade-in">
-            ⚠️ {errorMsg}
-          </div>
-        )}
-
-        {/* ── Plan cards ───────────────────────────────────── */}
-        {plansLoading && (
-          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px', marginBottom: '20px' }}>
-            Loading plans…
-          </p>
-        )}
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', maxWidth: '760px', marginBottom: '24px' }}>
-          {displayPlans.map((plan) => {
-            const isCurrentPlan = user?.plan === plan.id
-            const isSelected    = selected === plan.id
-            const isPlanPro     = plan.id === 'pro'
-
-            return (
-              <div
-                key={plan.id}
-                onClick={() => setSelected(plan.id)}
-                style={{
-                  position: 'relative', cursor: 'pointer', transition: 'all 0.2s ease',
-                  borderRadius: '18px', padding: '28px',
-                  background: isSelected
-                    ? isPlanPro
-                      ? 'linear-gradient(160deg, #1a1035 0%, #0f0f1a 100%)'
-                      : 'linear-gradient(160deg, #16162a 0%, #0f0f1a 100%)'
-                    : 'linear-gradient(160deg, #111120 0%, #0a0a14 100%)',
-                  border: isSelected
-                    ? `2px solid ${isPlanPro ? '#7c3aed' : 'rgba(255,255,255,0.3)'}`
-                    : '2px solid rgba(255,255,255,0.07)',
-                  boxShadow: isSelected && isPlanPro
-                    ? '0 0 40px rgba(124,58,237,0.2), 0 4px 24px rgba(0,0,0,0.4)'
-                    : '0 4px 24px rgba(0,0,0,0.3)',
-                  transform: isSelected ? 'translateY(-2px)' : 'translateY(0)',
-                }}
-              >
-                {/* Popular badge */}
-                {isPlanPro && (
-                  <div style={{
-                    position: 'absolute', top: '-1px', left: '50%', transform: 'translateX(-50%)',
-                    padding: '4px 16px', borderRadius: '0 0 10px 10px', fontSize: '10px', fontWeight: 800,
-                    background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', color: 'white',
-                    letterSpacing: '0.08em', textTransform: 'uppercase',
-                  }}>
-                    Most Popular
-                  </div>
-                )}
-
-                {/* Radio + current badge */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', marginTop: isPlanPro ? '8px' : '0' }}>
-                  <div style={{
-                    width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
-                    border: `2px solid ${isSelected ? '#7c3aed' : 'rgba(255,255,255,0.2)'}`,
-                    background: isSelected ? '#7c3aed' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.2s',
-                  }}>
-                    {isSelected && <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'white' }} />}
-                  </div>
-
-                  {isCurrentPlan && (
-                    <span style={{
-                      fontSize: '10px', fontWeight: 700, padding: '3px 9px', borderRadius: '999px',
-                      background: 'rgba(16,185,129,0.14)', color: '#6ee7b7',
-                      border: '1px solid rgba(16,185,129,0.25)',
-                    }}>
-                      Current Plan
-                    </span>
-                  )}
-                </div>
-
-                {/* Plan name + price */}
-                <div style={{ marginBottom: '22px' }}>
-                  <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'white', marginBottom: '4px', letterSpacing: '-0.02em' }}>
-                    {plan.name}
-                  </h2>
-                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', marginBottom: '14px' }}>
-                    {plan.description}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                    <span style={{ fontSize: '42px', fontWeight: 800, color: 'white', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                      {plan.price}
-                    </span>
-                    <span style={{ color: 'rgba(255,255,255,0.32)', fontSize: '13px' }}>/{plan.period}</span>
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', marginBottom: '18px' }} />
-
-                {/* Features */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-                  {plan.features.map((f, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <div style={{
-                        width: '18px', height: '18px', borderRadius: '50%', flexShrink: 0, marginTop: '1px',
-                        background: isPlanPro ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.07)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isPlanPro ? '#c4b5fd' : 'rgba(255,255,255,0.5)'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                      </div>
-                      <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: '13px', lineHeight: '1.5' }}>{f}</span>
-                    </div>
-                  ))}
-                </div>
+          {/* ✅ Usage bar for free users */}
+          {!isPro && (
+            <div className={`mb-7 rounded-lg border px-5 py-4 ${
+              usageHigh ? 'border-danger/25 bg-danger-soft' : 'border-line bg-surface'
+            }`}>
+              <div className="mb-2.5 flex items-center justify-between gap-3">
+                <p className="text-[13px] font-medium text-ink">Current Usage</p>
+                <p className={`text-xs font-medium tabular-nums ${usageHigh ? 'text-danger' : 'text-ink-2'}`}>
+                  {monthlyTokens.toLocaleString()} / {tokenLimit == null ? '∞' : tokenLimit.toLocaleString()} tokens
+                </p>
               </div>
-            )
-          })}
-        </div>
-
-        {/* ── CTA button ───────────────────────────────────── */}
-        <div style={{ maxWidth: '760px' }}>
-          {selected !== user?.plan ? (
-            <button
-              onClick={handleConfirm}
-              disabled={loading}
-              style={{
-                width: '100%', padding: '15px', borderRadius: '13px', fontSize: '15px', fontWeight: 800,
-                color: 'white', border: 'none', fontFamily: 'Inter, sans-serif',
-                background: loading
-                  ? 'rgba(124,58,237,0.35)'
-                  : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 24px rgba(124,58,237,0.4)',
-                transition: 'all 0.2s ease',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                letterSpacing: '-0.01em',
-              }}
-              onMouseEnter={e => { if (!loading) { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)' }}}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
-            >
-              {loading ? (
-                <>
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', animation: 'spin 0.7s linear infinite' }} />
-                  {selected === 'pro' ? 'Opening secure checkout…' : 'Processing…'}
-                </>
-              ) : selected === 'pro' ? (
-                <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                  </svg>
-                  {proPlan ? `Pay ₹${(proPlan.priceInPaise / 100).toFixed(proPlan.priceInPaise % 100 === 0 ? 0 : 2)} & Upgrade to Pro` : 'Upgrade to Pro'}
-                </>
-              ) : (
-                <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                    <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                  </svg>
-                  Confirm Downgrade to Free
-                </>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-sunken">
+                <div
+                  className={`h-full rounded-full transition-[width] duration-500 ease-out ${usageHigh ? 'bg-danger' : 'bg-accent'}`}
+                  style={{ width: `${usagePercent}%` }}
+                />
+              </div>
+              {usageHigh && (
+                <p className="mt-2 flex items-center gap-1.5 text-xs text-danger">
+                  <Icon size={13}>
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </Icon>
+                  You've used {usagePercent.toFixed(0)}% of your free tokens
+                </p>
               )}
-            </button>
-          ) : (
-            <div style={{
-              width: '100%', padding: '15px', borderRadius: '13px', textAlign: 'center',
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.35)', fontSize: '14px', fontWeight: 500,
-            }}>
-              {user?.plan === 'pro'
-                ? '✓ You already have lifetime Pro access — no payment needed'
-                : '✓ You are already on the Free plan'}
             </div>
           )}
 
-          {/* Fine print */}
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '11px', textAlign: 'center', marginTop: '12px', lineHeight: '1.6' }}>
-            {selected === 'pro'
-              ? 'Secure payment via Razorpay · One-time payment · Lifetime access, no renewals'
-              : 'Downgrading removes Pro access immediately'}
-          </p>
-        </div>
-
-        {/* ── Billing history ──────────────────────────────── */}
-        {transactions.length > 0 && (
-          <div style={{ maxWidth: '760px', marginTop: '36px' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'white', marginBottom: '14px' }}>
-              Billing History
-            </h3>
-            <div style={{
-              borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.02)', overflow: 'hidden',
-            }}>
-              {transactions.map((txn, i) => (
-                <div key={txn._id} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '14px 18px',
-                  borderBottom: i !== transactions.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-                }}>
-                  <div>
-                    <p style={{ color: 'white', fontSize: '13px', fontWeight: 600 }}>
-                      NeuralIQ Pro — ₹{(txn.amount / 100).toFixed(2)}
-                    </p>
-                    <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', marginTop: '2px' }}>
-                      {new Date(txn.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      {' · '}{txn.receiptNumber}
-                    </p>
-                  </div>
+          {/* ✅ Success notification — payment done + plan activated */}
+          {success && (
+            <div className="fade-in mb-6 rounded-lg border border-success/25 bg-success-soft px-5 py-4">
+              <div className="mb-3 flex items-center gap-2.5 text-success">
+                <Icon size={16}><polyline points="20 6 9 17 4 12"/></Icon>
+                <span className="text-[13px] font-medium">{successMsg}</span>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {paidTxnId && (
                   <button
-                    onClick={() => downloadReceiptAPI(txn._id)}
-                    style={{
-                      padding: '7px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700,
-                      background: 'rgba(124,58,237,0.1)', color: '#c4b5fd',
-                      border: '1px solid rgba(124,58,237,0.25)', cursor: 'pointer',
-                    }}
+                    onClick={() => downloadReceiptAPI(paidTxnId)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-surface px-3.5 py-2 text-xs font-medium text-success transition-colors hover:bg-bg"
                   >
-                    ⬇ Receipt
+                    <Icon size={13}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>
+                    Download Receipt (PDF)
                   </button>
-                </div>
-              ))}
+                )}
+                <button
+                  onClick={() => window.location.reload()}
+                  className="rounded-md border border-line-strong bg-surface px-3.5 py-2 text-xs font-medium text-ink transition-colors hover:bg-sunken"
+                >
+                  Continue
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
+          {/* ⚠️ Error notification */}
+          {errorMsg && (
+            <div role="alert" className="fade-in mb-6 flex items-start gap-2.5 rounded-lg border border-danger/25 bg-danger-soft px-4 py-3.5 text-[13px] font-medium text-danger">
+              <span className="mt-px shrink-0">
+                <Icon size={15}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </Icon>
+              </span>
+              {errorMsg}
+            </div>
+          )}
+
+          {/* ── Plan cards ── */}
+          {plansLoading && (
+            <p className="mb-5 text-[13px] text-ink-2">Loading plans…</p>
+          )}
+
+          <div className="mb-6 grid gap-4 sm:grid-cols-2" role="radiogroup" aria-label="Plans">
+            {displayPlans.map((plan) => {
+              const isCurrentPlan = user?.plan === plan.id
+              const isSelected    = selected === plan.id
+              const isPlanPro     = plan.id === 'pro'
+
+              return (
+                <div
+                  key={plan.id}
+                  role="radio"
+                  aria-checked={isSelected}
+                  tabIndex={0}
+                  onClick={() => setSelected(plan.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(plan.id) } }}
+                  className={`relative cursor-pointer rounded-xl border-2 bg-surface p-7 transition-colors ${
+                    isSelected ? 'border-accent' : 'border-line hover:border-line-strong'
+                  }`}
+                >
+                  {/* Popular badge */}
+                  {isPlanPro && (
+                    <div className="absolute -top-px left-1/2 -translate-x-1/2 rounded-b-md bg-accent px-3.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-accent-on">
+                      Most Popular
+                    </div>
+                  )}
+
+                  {/* Radio + current badge */}
+                  <div className={`mb-5 flex items-center justify-between ${isPlanPro ? 'mt-2' : ''}`}>
+                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                      isSelected ? 'border-accent bg-accent' : 'border-line-strong bg-surface'
+                    }`}>
+                      {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-accent-on" />}
+                    </div>
+
+                    {isCurrentPlan && (
+                      <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-[10px] font-medium text-success">
+                        Current Plan
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Plan name + price */}
+                  <div className="mb-5">
+                    <h2 className="font-display text-3xl leading-none tracking-tight text-ink">{plan.name}</h2>
+                    <p className="mb-4 mt-2 text-xs text-ink-2">{plan.description}</p>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-display text-5xl leading-none tracking-tight text-ink">{plan.price}</span>
+                      <span className="text-[13px] text-ink-2">/{plan.period}</span>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 h-px bg-line" />
+
+                  {/* Features */}
+                  <div className="flex flex-col gap-2.5">
+                    {plan.features.map((f, i) => (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <span className={`mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full ${
+                          isPlanPro ? 'bg-accent-soft text-accent' : 'bg-sunken text-ink-2'
+                        }`}>
+                          <Icon size={10}><polyline points="20 6 9 17 4 12"/></Icon>
+                        </span>
+                        <span className="text-[13px] leading-normal text-ink">{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* ── CTA button ── */}
+          <div>
+            {selected !== user?.plan ? (
+              <button
+                onClick={handleConfirm}
+                disabled={loading}
+                className={`${btnPrimary} w-full py-3.5 text-[15px]`}
+              >
+                {loading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent-on/30 border-t-accent-on" />
+                    {selected === 'pro' ? 'Opening secure checkout…' : 'Processing…'}
+                  </>
+                ) : selected === 'pro' ? (
+                  <>
+                    <Icon size={16}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>
+                    {proPlan ? `Pay ₹${(proPlan.priceInPaise / 100).toFixed(proPlan.priceInPaise % 100 === 0 ? 0 : 2)} & Upgrade to Pro` : 'Upgrade to Pro'}
+                  </>
+                ) : (
+                  <>
+                    <Icon size={16}>
+                      <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                      <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </Icon>
+                    Confirm Downgrade to Free
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 py-3.5 text-sm text-ink-2">
+                <span className="text-success"><Icon size={15}><polyline points="20 6 9 17 4 12"/></Icon></span>
+                {user?.plan === 'pro'
+                  ? 'You already have lifetime Pro access — no payment needed'
+                  : 'You are already on the Free plan'}
+              </div>
+            )}
+
+            {/* Fine print */}
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-ink-2">
+              {selected === 'pro'
+                ? 'Secure payment via Razorpay • One-time payment • Lifetime access, no renewals'
+                : 'Downgrading removes Pro access immediately'}
+            </p>
+          </div>
+
+          {/* ── Billing history ── */}
+          {transactions.length > 0 && (
+            <div className="mt-9">
+              <h3 className="mb-3.5 text-[15px] font-medium text-ink">Billing History</h3>
+              <div className="overflow-hidden rounded-lg border border-line bg-surface">
+                {transactions.map((txn, i) => (
+                  <div
+                    key={txn._id}
+                    className={`flex items-center justify-between gap-3 px-4 py-3.5 ${
+                      i !== transactions.length - 1 ? 'border-b border-line' : ''
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-medium text-ink">
+                        {BRAND_NAME} Pro — ₹{(txn.amount / 100).toFixed(2)}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] text-ink-2">
+                        {new Date(txn.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {' • '}{txn.receiptNumber}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => downloadReceiptAPI(txn._id)}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-3 py-1.5 text-[11px] font-medium text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
+                    >
+                      <Icon size={12}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>
+                      Receipt
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   )

@@ -1,35 +1,71 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Geist', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        display: ['"Instrument Serif"', 'Georgia', 'serif'],
+        mono: ['"Geist Mono"', '"JetBrains Mono"', 'ui-monospace', 'monospace'],
+      },
       colors: {
+        // ── New design tokens (values live in index.css, light + dark) ──
+        bg:       'rgb(var(--c-bg) / <alpha-value>)',
+        surface:  'rgb(var(--c-surface) / <alpha-value>)',
+        sunken:   'rgb(var(--c-sunken) / <alpha-value>)',
+        line:     {
+          DEFAULT: 'rgb(var(--c-line) / <alpha-value>)',
+          strong:  'rgb(var(--c-line-strong) / <alpha-value>)',
+        },
+        ink:      {
+          DEFAULT: 'rgb(var(--c-ink) / <alpha-value>)',
+          2:       'rgb(var(--c-ink-2) / <alpha-value>)',
+          3:       'rgb(var(--c-ink-3) / <alpha-value>)',
+        },
+        accent:   {
+          DEFAULT: 'rgb(var(--c-accent) / <alpha-value>)',
+          hover:   'rgb(var(--c-accent-hover) / <alpha-value>)',
+          soft:    'rgb(var(--c-accent-soft) / <alpha-value>)',
+          on:      'rgb(var(--c-on-accent) / <alpha-value>)',
+        },
+        success:  { DEFAULT: 'rgb(var(--c-success) / <alpha-value>)', soft: 'rgb(var(--c-success-soft) / <alpha-value>)' },
+        warning:  { DEFAULT: 'rgb(var(--c-warning) / <alpha-value>)', soft: 'rgb(var(--c-warning-soft) / <alpha-value>)' },
+        danger:   { DEFAULT: 'rgb(var(--c-danger) / <alpha-value>)',  soft: 'rgb(var(--c-danger-soft) / <alpha-value>)' },
+
+        // ── Legacy names, remapped so pages I haven't redesigned yet keep working ──
         space: {
-          bgStart:    '#1A1725',
-          bgEnd:      '#13111C',
-          cardTop:    '#262131',
-          cardBottom: '#1E1B26',
-          surface:    '#191621',
-          textWhite:  '#F3F4F6',
-          mutedRed:   '#3E262A',
+          bgStart:    'rgb(var(--c-bg) / <alpha-value>)',
+          bgEnd:      'rgb(var(--c-bg) / <alpha-value>)',
+          cardTop:    'rgb(var(--c-surface) / <alpha-value>)',
+          cardBottom: 'rgb(var(--c-surface) / <alpha-value>)',
+          surface:    'rgb(var(--c-surface) / <alpha-value>)',
+          textWhite:  'rgb(var(--c-ink) / <alpha-value>)',
+          mutedRed:   'rgb(var(--c-danger-soft) / <alpha-value>)',
         },
         cosmic: {
-          gold:   '#D4AF37',
-          amber:  '#FBBF24',
+          gold:  'rgb(var(--c-accent) / <alpha-value>)',
+          amber: 'rgb(var(--c-accent-hover) / <alpha-value>)',
         },
       },
       backgroundImage: {
-        'page-bg':   'radial-gradient(circle at center, #1A1725 0%, #13111C 100%)',
-        'card-bg':   'linear-gradient(180deg, #262131 0%, #1E1B26 100%)',
-        'gold-btn':  'linear-gradient(to right, #FBBF24, #D4AF37)',
+        // Legacy gradient utilities now resolve to flat, solid colors
+        'page-bg':  'linear-gradient(rgb(var(--c-bg)), rgb(var(--c-bg)))',
+        'card-bg':  'linear-gradient(rgb(var(--c-surface)), rgb(var(--c-surface)))',
+        'gold-btn': 'linear-gradient(rgb(var(--c-accent)), rgb(var(--c-accent)))',
       },
       boxShadow: {
-        'gold-glow': '0 0 15px rgba(212,175,55,0.25)',
-        'card':      '0 4px 30px rgba(0,0,0,0.4)',
+        // Hairlines over glows. Legacy names kept, glow removed.
+        'gold-glow': '0 0 0 0 transparent',
+        'card':      '0 1px 2px rgb(0 0 0 / 0.04)',
+        'pop':       '0 8px 24px -4px rgb(0 0 0 / 0.12), 0 0 0 1px rgb(var(--c-line))',
       },
       dropShadow: {
-        'gold':    '0 0 8px rgba(212,175,55,0.3)',
-        'gold-lg': '0 0 16px rgba(212,175,55,0.5)',
+        'gold':    '0 0 0 transparent',
+        'gold-lg': '0 0 0 transparent',
+      },
+      transitionTimingFunction: {
+        out: 'cubic-bezier(0.16, 1, 0.3, 1)',
       },
     },
   },

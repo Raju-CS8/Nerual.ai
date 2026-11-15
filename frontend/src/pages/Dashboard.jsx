@@ -2,46 +2,10 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { getUsageStatsAPI, getUsageSummaryAPI } from '../api'
 
-// ── Steampunk design tokens ──────────────────────────────
-// Module-level (not per-render) since Gear/PipeH below need them and
-// must themselves be module-level components — see comment there.
-const GOLD       = '#C5A059'
-const GOLD_DIM   = '#8B6914'
-const COPPER     = '#B8860B'
-const BG_BASE    = '#0B1510'
-const BG_CARD    = 'rgba(20,35,25,0.82)'
-const BG_SURFACE = 'rgba(15,28,20,0.9)'
-const BORDER_GOLD = `1px solid ${GOLD}`
+const fmt = (n) => (n > 1000 ? `${(n / 1000).toFixed(1)}k` : n)
 
-// Gear SVG component — moved to module scope (was previously defined
-// inside the Dashboard function body, recreated on every render, which
-// resets its internal state and cost extra work each render; it only
-// ever depended on the module-level GOLD constant, never on any
-// Dashboard prop/state, so hoisting it out changes nothing about what
-// it renders).
-const Gear = ({ size = 40, opacity = 0.18, rotate = 0 }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40"
-    style={{ opacity, transform: `rotate(${rotate}deg)` }}>
-    <circle cx="20" cy="20" r="7" fill="none" stroke={GOLD} strokeWidth="2"/>
-    <circle cx="20" cy="20" r="3" fill={GOLD} opacity="0.4"/>
-    {[0,30,60,90,120,150,180,210,240,270,300,330].map((a,i) => {
-      const rad = a * Math.PI / 180
-      const x1 = 20 + 9  * Math.cos(rad)
-      const y1 = 20 + 9  * Math.sin(rad)
-      const x2 = 20 + 13 * Math.cos(rad)
-      const y2 = 20 + 13 * Math.sin(rad)
-      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={GOLD} strokeWidth="2.5" strokeLinecap="round"/>
-    })}
-  </svg>
-)
-
-// Pipe connector SVG — same reasoning as Gear above.
-const PipeH = ({ width = 60, color = GOLD }) => (
-  <svg width={width} height="14" viewBox={`0 0 ${width} 14`}>
-    <rect x="0" y="4" width={width} height="6" rx="3" fill={`${color}22`} stroke={`${color}55`} strokeWidth="1"/>
-    <rect x="0" y="5.5" width={width} height="3" rx="1.5" fill={`${color}40`}/>
-  </svg>
-)
+const cardCls = 'rounded-lg border border-line bg-surface p-5'
+const labelCls = 'mb-4 text-xs font-medium uppercase tracking-wider text-ink-2'
 
 export default function Dashboard({ activePage, setActivePage, user, onLogout }) {
   const [stats, setStats] = useState([])
@@ -95,106 +59,76 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
   const isWarning = !isPro && usagePercent >= 80
   const isLimit   = !isPro && usagePercent >= 100
 
-  // ── Steampunk design tokens (GOLD, GOLD_DIM, etc.) and the Gear/PipeH
-  // components now live at module scope above — see comment there.
+  // ── Display-only helpers ──
+  const noUsage     = stats.every(s => s.tokensUsed === 0)
+  const unlimited   = isPro || tokenLimit == null
+  const rangeLabel  = stats.length > 0 ? `${stats[0]?.label} – ${stats[stats.length - 1]?.label}` : '06/11 – 06/17'
+  const resetLabel  = usageSummary?.resetsOn
+    ? new Date(usageSummary.resetsOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+    : 'monthly'
+  const gaugeTone   = isLimit ? 'stroke-danger' : isWarning ? 'stroke-warning' : 'stroke-accent'
 
-  const card = {
-    background: BG_CARD,
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    border: `1px solid ${GOLD}55`,
-    borderRadius: '14px',
-    padding: '22px',
-    boxShadow: `0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(197,160,89,0.12)`,
-    position: 'relative',
-    overflow: 'hidden',
-  }
+  const primaryBtn =
+    'rounded-md bg-accent px-4 py-2 text-[13px] font-medium text-accent-on transition-colors hover:bg-accent-hover'
 
-  const goldLabel = {
-    fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em',
-    textTransform: 'uppercase', color: GOLD_DIM,
-    fontFamily: "'JetBrains Mono', monospace",
-    marginBottom: '14px',
-  }
+  const accountRows = [
+    { label: 'Plan', value: isPro ? 'Pro' : 'Free' },
+    { label: 'Tokens Remaining', value: (isPro || tokenLimit == null) ? 'Unlimited' : Math.max(tokenLimit - tokensUsed, 0).toLocaleString() },
+    { label: 'Documents Processed', value: user?.documentsProcessed || 0 },
+    { label: 'Active Days', value: `${stats.filter(s => s.tokensUsed > 0).length} / 7` },
+  ]
 
   return (
-    <div style={{
-      display: 'flex', height: '100vh', overflow: 'hidden',
-      background: `radial-gradient(ellipse 120% 80% at 30% 20%, #0f2016 0%, ${BG_BASE} 60%)`,
-      fontFamily: "'Inter', sans-serif",
-    }}>
+    <div className="flex h-screen overflow-hidden bg-bg">
       <Sidebar activePage={activePage} setActivePage={setActivePage} user={user} onLogout={onLogout} />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }} className="page-enter">
+      <div className="page-enter flex-1 overflow-y-auto px-5 pb-10 pt-16 md:px-10 md:pt-9">
+        <div className="mx-auto max-w-[1400px]">
 
-        {/* ── Steampunk ambient overlay ── */}
-        <div style={{
-          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-          background: 'radial-gradient(ellipse 60% 50% at 70% 80%, rgba(197,160,89,0.04) 0%, transparent 70%)',
-        }}/>
-
-        <div style={{ position: 'relative', zIndex: 1 }}>
-
-          {/* ── Header ─────────────────────────────────────── */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
+          {/* ── Header ── */}
+          <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 style={{
-                fontSize: '28px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em',
-                fontFamily: "'Playfair Display', 'Georgia', serif",
-                background: `linear-gradient(135deg, ${GOLD}, #e8c87a, ${COPPER})`,
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>
-                NEURALIQ. <span style={{ fontStyle: 'italic', fontWeight: 400 }}>Dashboard.</span>
-              </h1>
-              <p style={{ color: 'rgba(197,160,89,0.45)', marginTop: '6px', fontSize: '13px', fontFamily: "'JetBrains Mono', monospace", margin: '6px 0 0' }}>
-                Welcome back, <span style={{ color: `${GOLD}cc` }}>{user?.name || 'User'}</span>.
+              <h1 className="font-display text-4xl tracking-tight text-ink">Dashboard</h1>
+              <p className="mt-1.5 text-sm text-ink-2">
+                Welcome back, <span className="font-medium text-ink">{user?.name || 'User'}</span>.
               </p>
             </div>
 
-            {/* Plan Status — steampunk badge */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '14px',
-              padding: '14px 20px', borderRadius: '12px',
-              background: BG_SURFACE, border: `1px solid ${GOLD}44`,
-              boxShadow: `0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(197,160,89,0.1)`,
-            }}>
-              <div style={{ position: 'relative' }}>
-                <span style={{
-                  display: 'inline-block', padding: '7px 18px', borderRadius: '8px',
-                  fontSize: '13px', fontWeight: 700, letterSpacing: '0.05em',
-                  background: isPro
-                    ? `linear-gradient(135deg, #4a3500, #7a5a00)`
-                    : `linear-gradient(135deg, #1a3a20, #2a5a30)`,
-                  color: GOLD, border: `1px solid ${GOLD}66`,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  boxShadow: `0 2px 8px rgba(197,160,89,0.2), inset 0 1px 0 rgba(255,255,255,0.05)`,
-                }}>
-                  {isPro ? '✦ Pro Plan' : 'Free Plan'}
-                </span>
-              </div>
+            {/* Plan Status */}
+            <div className="flex items-center gap-4 rounded-lg border border-line bg-surface px-4 py-3">
+              <span className={`rounded-md px-3 py-1.5 text-[13px] font-medium ${
+                isPro ? 'bg-accent-soft text-accent' : 'bg-sunken text-ink'
+              }`}>
+                {isPro ? 'Pro Plan' : 'Free Plan'}
+              </span>
               <div>
-                <p style={{ fontSize: '13px', fontWeight: 600, color: GOLD, margin: '0 0 2px', fontFamily: "'Playfair Display', serif" }}>
-                  Plan Status
-                </p>
-                <p style={{ fontSize: '11px', color: 'rgba(197,160,89,0.45)', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                  Plan expires 12/31/2026. Keep exploring!
-                </p>
+                <p className="text-[13px] font-medium text-ink">Plan Status</p>
+                <p className="text-xs text-ink-2">Plan expires 12/31/2026. Keep exploring!</p>
               </div>
             </div>
           </div>
 
           {/* ✅ Token warning — logic preserved exactly */}
           {isWarning && (
-            <div style={{
-              marginBottom: '20px', padding: '14px 20px', borderRadius: '12px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
-              background: isLimit ? 'rgba(80,20,20,0.6)' : 'rgba(80,50,10,0.6)',
-              border: `1px solid ${isLimit ? '#ef444466' : '#f59e0b66'}`,
-              backdropFilter: 'blur(8px)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '18px' }}>{isLimit ? '⛔' : '⚠️'}</span>
-                <p style={{ fontSize: '13px', fontWeight: 500, color: isLimit ? '#fca5a5' : '#fcd34d', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className={`mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border px-4 py-3 ${
+              isLimit ? 'border-danger/25 bg-danger-soft' : 'border-warning/25 bg-warning-soft'
+            }`}>
+              <div className={`flex items-center gap-3 ${isLimit ? 'text-danger' : 'text-warning'}`}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+                  strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  {isLimit ? (
+                    <>
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                    </>
+                  ) : (
+                    <>
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </>
+                  )}
+                </svg>
+                <p className="text-sm font-medium">
                   {isLimit
                     ? 'Token limit reached — upgrade to Pro to keep chatting.'
                     : `${usagePercent.toFixed(0)}% of your free tokens used. Running low.`}
@@ -202,240 +136,129 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
               </div>
               <button
                 onClick={() => setActivePage('Pricing')}
-                style={{
-                  padding: '8px 18px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-                  background: `linear-gradient(135deg, #4a3500, #7a5a00)`,
-                  color: GOLD, border: `1px solid ${GOLD}66`,
-                  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  boxShadow: `0 2px 10px rgba(197,160,89,0.25)`,
-                }}>
+                className="shrink-0 rounded-md bg-accent px-4 py-1.5 text-[13px] font-medium text-accent-on transition-colors hover:bg-accent-hover"
+              >
                 Upgrade →
               </button>
             </div>
           )}
 
-          {/* ── Top row: 4 cards ──────────────────────────── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px', marginBottom: '16px' }}>
+          {/* ── Top row: 4 cards ── */}
+          <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
-            {/* Card 1: Tokens Used — Brain focal point */}
-            <div style={card}>
-              {/* Corner gear decorations */}
-              <div style={{ position: 'absolute', top: -8, right: -8, pointerEvents: 'none' }}>
-                <Gear size={36} opacity={0.22} rotate={15}/>
-              </div>
-              <p style={goldLabel}>Tokens Used</p>
+            {/* Card 1: Tokens Used (gauge) */}
+            <div className={cardCls}>
+              <p className={labelCls}>Tokens Used</p>
 
-              {/* Brain cylinder focal point */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 0 12px' }}>
-                {/* Outer ring */}
-                <div style={{ position: 'relative', width: '140px', height: '140px' }}>
-                  <svg viewBox="0 0 140 140" style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
-                    <defs>
-                      <linearGradient id="goldArc" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor={GOLD}/>
-                        <stop offset="100%" stopColor={COPPER}/>
-                      </linearGradient>
-                      <filter id="goldGlow">
-                        <feGaussianBlur stdDeviation="3" result="blur"/>
-                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                      </filter>
-                    </defs>
-                    {/* Outer decorative ring */}
-                    <circle cx="70" cy="70" r="64" fill="none" stroke={`${GOLD}22`} strokeWidth="1"/>
-                    <circle cx="70" cy="70" r="60" fill="none" stroke={`${GOLD}15`} strokeWidth="6"/>
-                    {/* Track arc */}
-                    <path d="M 15 70 A 55 55 0 1 1 125 70"
-                      fill="none" stroke={`${GOLD}18`} strokeWidth="7" strokeLinecap="round"/>
-                    {/* Progress arc */}
-                    <path d="M 15 70 A 55 55 0 1 1 125 70"
-                      fill="none" stroke="url(#goldArc)" strokeWidth="7" strokeLinecap="round"
-                      strokeDasharray={`${(usagePercent / 100) * 274} 274`}
-                      filter="url(#goldGlow)"
+              <div className="flex flex-col items-center">
+                <div className="relative h-[118px] w-[190px]">
+                  <svg viewBox="0 0 140 80" className="absolute inset-0 h-full w-full" role="img"
+                    aria-label={`${usagePercent.toFixed(0)} percent of token limit used`}>
+                    {/* Track */}
+                    <path d="M 15 70 A 55 55 0 1 1 125 70" pathLength="100"
+                      fill="none" className="stroke-sunken" strokeWidth="9" strokeLinecap="round"/>
+                    {/* Progress */}
+                    <path d="M 15 70 A 55 55 0 1 1 125 70" pathLength="100"
+                      fill="none" className={gaugeTone} strokeWidth="9" strokeLinecap="round"
+                      strokeDasharray={`${usagePercent} 100`}
                       style={{ transition: 'stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)' }}/>
-                    {/* Tick marks */}
-                    {[0,60,120,180,240,300].map((a, i) => {
-                      const rad = ((a - 90) * Math.PI) / 180
-                      const x1 = 70 + 56 * Math.cos(rad), y1 = 70 + 56 * Math.sin(rad)
-                      const x2 = 70 + 61 * Math.cos(rad), y2 = 70 + 61 * Math.sin(rad)
-                      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={`${GOLD}55`} strokeWidth="1.5"/>
-                    })}
-                    {/* Inner glass cylinder */}
-                    <circle cx="70" cy="70" r="44" fill="rgba(10,25,15,0.85)" stroke={`${GOLD}33`} strokeWidth="1.5"/>
-                    {/* Brain symbol */}
-                    <text x="70" y="62" textAnchor="middle" fontSize="22" fill={`${GOLD}88`}>🧠</text>
                   </svg>
-                  {/* Number overlay */}
-                  <div style={{
-                    position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', paddingTop: '28px',
-                  }}>
-                    <span style={{
-                      fontSize: '26px', fontWeight: 700, color: GOLD, lineHeight: 1,
-                      fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-0.03em',
-                      textShadow: `0 0 20px ${GOLD}66`,
-                    }}>
+                  <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
+                    <span className="font-display text-3xl leading-none tracking-tight text-ink tabular-nums">
                       {tokensUsed.toLocaleString()}
                     </span>
-                    <span style={{ fontSize: '11px', color: `${GOLD}55`, marginTop: '3px', fontFamily: "'JetBrains Mono', monospace" }}>
-                      {isPro || tokenLimit == null ? '/ ∞' : `/ ${tokenLimit.toLocaleString()}`}
+                    <span className="mt-1 text-xs text-ink-2">
+                      {unlimited ? '/ ∞' : `/ ${tokenLimit.toLocaleString()}`}
                     </span>
                   </div>
                 </div>
 
-                {/* Pipe below */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '4px', gap: '4px' }}>
-                  <PipeH width={80}/>
-                  <p style={{ fontSize: '12px', color: `${GOLD}88`, fontFamily: "'JetBrains Mono', monospace", margin: 0, textAlign: 'center' }}>
-                    {isPro || tokenLimit == null ? 'Unlimited' : `${Math.max(tokenLimit - tokensUsed, 0).toLocaleString()} remaining`}
-                  </p>
-                  <p style={{ fontSize: '10px', color: `${GOLD}44`, fontFamily: "'JetBrains Mono', monospace", margin: 0 }}>
-                    {isPro || tokenLimit == null
-                      ? 'Pro Plan — no monthly cap'
-                      : `Free Plan Limit: ${tokenLimit.toLocaleString()} · resets ${usageSummary?.resetsOn ? new Date(usageSummary.resetsOn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'monthly'}`}
-                  </p>
-                </div>
+                <p className="mt-4 text-center text-[13px] text-ink">
+                  {unlimited ? 'Unlimited' : `${Math.max(tokenLimit - tokensUsed, 0).toLocaleString()} remaining`}
+                </p>
+                <p className="mt-0.5 text-center text-xs text-ink-2">
+                  {unlimited
+                    ? 'Pro Plan — no monthly cap'
+                    : `Free Plan Limit: ${tokenLimit.toLocaleString()} • resets ${resetLabel}`}
+                </p>
               </div>
 
-              {/* Sparkline bars styled as pipeline */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '32px', marginTop: '8px' }}>
+              {/* Sparkline bars */}
+              <div className="mt-5 flex h-8 items-end gap-0.5" aria-hidden="true">
                 {bars.map((h, i) => (
-                  <div key={i} style={{
-                    flex: 1, borderRadius: '2px 2px 0 0',
-                    height: `${h}%`,
-                    background: i === bars.length - 1
-                      ? `linear-gradient(180deg, ${GOLD}, ${COPPER})`
-                      : `${GOLD}28`,
-                    border: i === bars.length - 1 ? `1px solid ${GOLD}88` : 'none',
-                    transition: 'height 0.3s ease',
-                  }}/>
+                  <div
+                    key={i}
+                    className={`flex-1 rounded-t-sm ${i === bars.length - 1 ? 'bg-accent' : 'bg-line-strong'}`}
+                    style={{ height: `${h}%` }}
+                  />
                 ))}
               </div>
-              <p style={{ fontSize: '10px', color: `${GOLD}44`, margin: '6px 0 0', fontFamily: "'JetBrains Mono', monospace" }}>
-                Tokens used
-              </p>
+              <p className="mt-1.5 text-xs text-ink-3">Tokens used</p>
             </div>
 
-            {/* Card 2: Documents Processed — Gear mechanism */}
-            <div style={card}>
-              <div style={{ position: 'absolute', top: -6, left: -6, pointerEvents: 'none' }}>
-                <Gear size={32} opacity={0.2} rotate={-20}/>
-              </div>
-              <p style={goldLabel}>Documents Processed</p>
+            {/* Card 2: Documents Processed */}
+            <div className={cardCls}>
+              <p className={labelCls}>Documents Processed</p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 0 0' }}>
-                {/* Gear cluster */}
-                <div style={{ position: 'relative', width: '120px', height: '120px', marginBottom: '14px' }}>
-                  <svg viewBox="0 0 120 120" style={{ width: '100%', height: '100%' }}>
-                    <defs>
-                      <filter id="gearGlow">
-                        <feGaussianBlur stdDeviation="2" result="blur"/>
-                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                      </filter>
-                      <linearGradient id="gearGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor={GOLD}/>
-                        <stop offset="100%" stopColor={COPPER}/>
-                      </linearGradient>
-                    </defs>
-                    {/* Outer gear teeth */}
-                    {[0,22,44,66,88,110,132,154,176,198,220,242,264,286,308,330].map((a, i) => {
-                      const rad = (a * Math.PI) / 180
-                      const x1 = 60 + 46 * Math.cos(rad), y1 = 60 + 46 * Math.sin(rad)
-                      const x2 = 60 + 55 * Math.cos(rad), y2 = 60 + 55 * Math.sin(rad)
-                      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={`${GOLD}88`} strokeWidth="5" strokeLinecap="round"/>
-                    })}
-                    {/* Main gear ring */}
-                    <circle cx="60" cy="60" r="46" fill="none" stroke="url(#gearGrad)" strokeWidth="2.5" filter="url(#gearGlow)"/>
-                    <circle cx="60" cy="60" r="36" fill="rgba(10,25,15,0.9)" stroke={`${GOLD}44`} strokeWidth="1.5"/>
-                    {/* Inner details */}
-                    {[0,60,120,180,240,300].map((a, i) => {
-                      const rad = (a * Math.PI) / 180
-                      const x1 = 60 + 22 * Math.cos(rad), y1 = 60 + 22 * Math.sin(rad)
-                      const x2 = 60 + 32 * Math.cos(rad), y2 = 60 + 32 * Math.sin(rad)
-                      return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={`${GOLD}44`} strokeWidth="2" strokeLinecap="round"/>
-                    })}
-                    <circle cx="60" cy="60" r="18" fill={`${GOLD}18`} stroke={`${GOLD}66`} strokeWidth="1.5"/>
-                    {/* Center number */}
-                    <text x="60" y="66" textAnchor="middle" fill={GOLD}
-                      fontSize="22" fontWeight="800" fontFamily="'JetBrains Mono', monospace"
-                      filter="url(#gearGlow)">
+              <div className="flex flex-col items-center py-2">
+                <div className="flex h-[118px] w-[118px] items-center justify-center rounded-full border border-line-strong bg-bg">
+                  <div className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full border border-line bg-surface">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+                      strokeLinecap="round" strokeLinejoin="round" className="mb-0.5 text-accent" aria-hidden="true">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <span className="font-display text-3xl leading-none tracking-tight text-ink tabular-nums">
                       {user?.documentsProcessed || 0}
-                    </text>
-                  </svg>
-
-                  {/* Small satellite gear */}
-                  <div style={{ position: 'absolute', top: 0, right: -6 }}>
-                    <Gear size={28} opacity={0.45} rotate={40}/>
-                  </div>
-                  <div style={{ position: 'absolute', bottom: 0, left: -6 }}>
-                    <Gear size={22} opacity={0.3} rotate={-30}/>
+                    </span>
                   </div>
                 </div>
-
-                {/* Pipe connector */}
-                <PipeH width={60}/>
-                <p style={{ fontSize: '12px', color: `${GOLD}77`, fontFamily: "'JetBrains Mono', monospace", margin: '8px 0 0', textAlign: 'center' }}>
+                <p className="mt-5 text-center text-[13px] text-ink-2">
                   Total Documents Processed: {user?.documentsProcessed || 0}
                 </p>
               </div>
             </div>
 
             {/* Card 3: Usage Overview mini chart */}
-            <div style={card}>
-              <div style={{ position: 'absolute', bottom: 8, right: 8, pointerEvents: 'none' }}>
-                <Gear size={30} opacity={0.15} rotate={60}/>
-              </div>
-              <p style={goldLabel}>Usage Overview (Last 7 Days)</p>
-              <p style={{ fontSize: '10px', color: `${GOLD}44`, marginBottom: '10px', fontFamily: "'JetBrains Mono', monospace" }}>
-                Real token usage per day
-              </p>
+            <div className={cardCls}>
+              <p className="text-xs font-medium uppercase tracking-wider text-ink-2">Usage Overview (Last 7 Days)</p>
+              <p className="mb-3 mt-1 text-xs text-ink-3">Real token usage per day</p>
 
-              {stats.every(s => s.tokensUsed === 0) ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '110px', gap: '10px' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={`${GOLD}44`} strokeWidth="1.5" strokeLinecap="round">
+              {noUsage ? (
+                <div className="flex h-[120px] flex-col items-center justify-center gap-2 rounded-md border border-dashed border-line-strong">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+                    strokeLinecap="round" className="text-ink-3" aria-hidden="true">
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                   </svg>
-                  <p style={{ fontSize: '11px', color: `${GOLD}44`, textAlign: 'center', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                    Start chatting to see usage
-                  </p>
+                  <p className="text-center text-xs text-ink-2">Start chatting to see usage</p>
                 </div>
               ) : (
-                <svg viewBox="0 0 240 90" style={{ width: '100%' }}>
+                <svg viewBox="0 0 240 90" className="w-full" role="img" aria-label="Token usage per day">
                   <defs>
-                    <linearGradient id="miniAreaSteam" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={GOLD} stopOpacity="0.25"/>
-                      <stop offset="100%" stopColor={GOLD} stopOpacity="0"/>
+                    <linearGradient id="miniArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" style={{ stopColor: 'rgb(var(--c-accent))', stopOpacity: 0.18 }}/>
+                      <stop offset="100%" style={{ stopColor: 'rgb(var(--c-accent))', stopOpacity: 0 }}/>
                     </linearGradient>
-                    <linearGradient id="miniLineSteam" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor={GOLD}/>
-                      <stop offset="100%" stopColor={COPPER}/>
-                    </linearGradient>
-                    <filter id="lineGlow2">
-                      <feGaussianBlur stdDeviation="1.5" result="blur"/>
-                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
                   </defs>
-                  {/* Grid */}
                   {[20, 45, 70].map(y => (
-                    <line key={y} x1="10" y1={y} x2="230" y2={y} stroke={`${GOLD}12`} strokeWidth="1" strokeDasharray="4,4"/>
+                    <line key={y} x1="10" y1={y} x2="230" y2={y} className="stroke-line" strokeWidth="1" strokeDasharray="4,4"/>
                   ))}
-                  {/* Pipe-style area */}
                   <path d={`M${stats.map((s,i)=>`${10+(i*34)},${60-((s.tokensUsed/maxTokens)*48)}`).join(' L')} L${10+(stats.length-1)*34},80 L10,80 Z`}
-                    fill="url(#miniAreaSteam)"/>
+                    fill="url(#miniArea)"/>
                   <path d={`M${stats.map((s,i)=>`${10+(i*34)},${60-((s.tokensUsed/maxTokens)*48)}`).join(' L')}`}
-                    fill="none" stroke="url(#miniLineSteam)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" filter="url(#lineGlow2)"/>
+                    fill="none" className="stroke-accent" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   {stats.map((s, i) => {
                     const x = 10 + i * 34
                     const y = 60 - ((s.tokensUsed / maxTokens) * 48)
                     return (
                       <g key={i}>
-                        <circle cx={x} cy={y} r="3.5" fill={GOLD} stroke="#0B1510" strokeWidth="1.5"/>
+                        <circle cx={x} cy={y} r="3" className="fill-surface stroke-accent" strokeWidth="1.5"/>
                         {s.tokensUsed > 0 && (
-                          <text x={x} y={y - 8} textAnchor="middle" fill={`${GOLD}cc`} fontSize="7" fontFamily="'JetBrains Mono', monospace">
-                            {s.tokensUsed > 1000 ? `${(s.tokensUsed/1000).toFixed(1)}k` : s.tokensUsed}
+                          <text x={x} y={y - 7} textAnchor="middle" fontSize="7" className="fill-ink-2">
+                            {fmt(s.tokensUsed)}
                           </text>
                         )}
-                        <text x={x} y="87" textAnchor="middle" fill={`${GOLD}55`} fontSize="7" fontFamily="'JetBrains Mono', monospace">
+                        <text x={x} y="87" textAnchor="middle" fontSize="7" className="fill-ink-3">
                           {s.label}
                         </text>
                       </g>
@@ -444,175 +267,104 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
                 </svg>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: GOLD, boxShadow: `0 0 6px ${GOLD}` }}/>
-                <span style={{ fontSize: '10px', color: `${GOLD}55`, fontFamily: "'JetBrains Mono', monospace" }}>Real token usage per day</span>
+              <div className="mt-3 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-accent" />
+                <span className="text-xs text-ink-2">Real token usage per day</span>
               </div>
             </div>
 
-            {/* Card 4: AI Insights */}
-            <div style={card}>
-              <div style={{ position: 'absolute', top: 8, right: 8, pointerEvents: 'none' }}>
-                <Gear size={28} opacity={0.18} rotate={-45}/>
-              </div>
-              <p style={goldLabel}>AI Insights &amp; Actions</p>
+            {/* Card 4: AI Insights & Actions */}
+            <div className={cardCls}>
+              <p className={labelCls}>AI Insights &amp; Actions</p>
 
-              {/* Book icon */}
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
-                <div style={{
-                  width: '48px', height: '48px', borderRadius: '50%',
-                  background: `radial-gradient(circle, ${GOLD}22, transparent)`,
-                  border: `1px solid ${GOLD}44`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: `0 0 20px ${GOLD}33`,
-                  fontSize: '22px',
-                }}>
-                  📖
-                </div>
-              </div>
-
-              {/* Insight bubble */}
-              <div style={{
-                padding: '11px 13px', borderRadius: '10px', marginBottom: '12px',
-                background: `rgba(197,160,89,0.07)`, border: `1px solid ${GOLD}33`,
-              }}>
-                <p style={{ fontSize: '12px', color: `${GOLD}cc`, lineHeight: 1.55, margin: '0 0 10px', fontFamily: "'Inter', sans-serif" }}>
-                  <span style={{ color: GOLD, fontWeight: 600 }}>Insight:</span>{' '}
+              <div className="mb-3 rounded-md border border-line bg-bg p-3">
+                <p className="mb-3 text-[13px] leading-relaxed text-ink-2">
+                  <span className="font-medium text-ink">Insight:</span>{' '}
                   {user?.documentsProcessed > 0
                     ? `Document #${user.documentsProcessed} analysis suggests optimization for a more precise summary.`
                     : 'Upload documents to get AI-powered insights.'}
                 </p>
                 <button
                   onClick={() => setActivePage('Files')}
-                  style={{
-                    width: '100%', padding: '8px', borderRadius: '8px',
-                    fontSize: '12px', fontWeight: 700,
-                    background: `linear-gradient(135deg, #3a2a00, #6a4a00)`,
-                    color: GOLD, border: `1px solid ${GOLD}55`,
-                    cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace",
-                    boxShadow: `0 2px 10px rgba(197,160,89,0.2), inset 0 1px 0 rgba(255,255,255,0.05)`,
-                    transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 4px 20px rgba(197,160,89,0.4), inset 0 1px 0 rgba(255,255,255,0.1)` }}
-                  onMouseLeave={e => { e.currentTarget.style.boxShadow = `0 2px 10px rgba(197,160,89,0.2), inset 0 1px 0 rgba(255,255,255,0.05)` }}
+                  className={`${primaryBtn} w-full`}
                 >
                   {user?.documentsProcessed > 0 ? 'Optimize summary' : 'Upload files'}
                 </button>
               </div>
 
-              {/* Top Topics */}
-              <p style={{ fontSize: '10px', fontWeight: 700, color: `${GOLD}66`, marginBottom: '7px', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: "'JetBrains Mono', monospace" }}>
-                Top Topics
-              </p>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-ink-2">Top Topics</p>
               {user?.documentsProcessed > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <ul className="space-y-1.5">
                   {[
                     `Topic of: Document #${user.documentsProcessed}`,
                     'Textroipanting in the files',
                   ].map((topic, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                      <span style={{ color: GOLD, fontSize: '12px', lineHeight: 1 }}>✦</span>
-                      <span style={{ fontSize: '11px', color: `${GOLD}77`, fontFamily: "'JetBrains Mono', monospace" }}>{topic}</span>
-                    </div>
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                      <span className="text-xs text-ink-2">{topic}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               ) : (
-                <p style={{ fontSize: '11px', color: `${GOLD}33`, fontStyle: 'italic', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                  No files analyzed yet
-                </p>
+                <p className="text-xs italic text-ink-3">No files analyzed yet</p>
               )}
             </div>
           </div>
 
-          {/* ── Bottom row ──────────────────────────────────── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          {/* ── Bottom row ── */}
+          <div className="grid gap-4 lg:grid-cols-2">
 
-            {/* Large usage chart — pipeline style */}
-            <div style={card}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            {/* Large usage chart */}
+            <div className={cardCls}>
+              <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
-                  <p style={{ ...goldLabel, marginBottom: '2px' }}>Total Tokens Used (7 Days)</p>
-                  <p style={{ fontSize: '11px', color: `${GOLD}44`, margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                    {stats.length > 0 ? `${stats[0]?.label} – ${stats[stats.length-1]?.label}` : '06/11 – 06/17'}
-                  </p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-ink-2">Total Tokens Used (7 Days)</p>
+                  <p className="mt-1 text-xs text-ink-3">{rangeLabel}</p>
                 </div>
-                {/* Peak value */}
                 {graphPoints.length > 0 && (() => {
                   const peak = graphPoints.reduce((a, b) => b.tokens > a.tokens ? b : a, graphPoints[0])
                   return peak.tokens > 0 ? (
-                    <span style={{
-                      fontSize: '20px', fontWeight: 700, color: GOLD,
-                      fontFamily: "'JetBrains Mono', monospace",
-                      textShadow: `0 0 16px ${GOLD}88`,
-                    }}>
-                      {peak.tokens > 1000 ? `${(peak.tokens/1000).toFixed(1)}k` : peak.tokens}
+                    <span className="font-display text-2xl leading-none text-ink tabular-nums">
+                      {fmt(peak.tokens)}
                     </span>
                   ) : null
                 })()}
               </div>
 
-              {stats.every(s => s.tokensUsed === 0) ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '155px', gap: '12px' }}>
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke={`${GOLD}33`} strokeWidth="1.5" strokeLinecap="round">
+              {noUsage ? (
+                <div className="flex h-[170px] flex-col items-center justify-center gap-3 rounded-md border border-dashed border-line-strong">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+                    strokeLinecap="round" className="text-ink-3" aria-hidden="true">
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                   </svg>
-                  <p style={{ fontSize: '13px', color: `${GOLD}44`, textAlign: 'center', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                    Start chatting to see your usage
-                  </p>
+                  <p className="text-center text-sm text-ink-2">Start chatting to see your usage</p>
                 </div>
               ) : (
-                <svg viewBox="0 0 420 160" style={{ width: '100%' }}>
+                <svg viewBox="0 0 420 160" className="w-full" role="img" aria-label="Total tokens used over 7 days">
                   <defs>
-                    <linearGradient id="steamArea" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={GOLD} stopOpacity="0.28"/>
-                      <stop offset="100%" stopColor={GOLD} stopOpacity="0"/>
+                    <linearGradient id="bigArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" style={{ stopColor: 'rgb(var(--c-accent))', stopOpacity: 0.18 }}/>
+                      <stop offset="100%" style={{ stopColor: 'rgb(var(--c-accent))', stopOpacity: 0 }}/>
                     </linearGradient>
-                    <linearGradient id="steamLine" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor={GOLD}/>
-                      <stop offset="100%" stopColor={COPPER}/>
-                    </linearGradient>
-                    <filter id="steamGlow">
-                      <feGaussianBlur stdDeviation="2.5" result="blur"/>
-                      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
                   </defs>
 
-                  {/* Dashed grid */}
                   {[20, 55, 90, 120].map(y => (
-                    <line key={y} x1="10" y1={y} x2="410" y2={y}
-                      stroke={`${GOLD}10`} strokeWidth="1" strokeDasharray="6,4"/>
+                    <line key={y} x1="10" y1={y} x2="410" y2={y} className="stroke-line" strokeWidth="1" strokeDasharray="6,4"/>
                   ))}
 
-                  {/* Pipe nodes — horizontal connectors between points */}
-                  {graphPoints.length > 1 && graphPoints.slice(0, -1).map((p, i) => {
-                    const next = graphPoints[i + 1]
-                    return (
-                      <line key={i} x1={p.x} y1={p.y} x2={next.x} y2={next.y}
-                        stroke={`${GOLD}22`} strokeWidth="6" strokeLinecap="round"/>
-                    )
-                  })}
+                  <path d={areaPath} fill="url(#bigArea)"/>
+                  <path d={linePath} fill="none" className="stroke-accent" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round"/>
 
-                  {/* Area fill */}
-                  <path d={areaPath} fill="url(#steamArea)"/>
-
-                  {/* Main pipeline line */}
-                  <path d={linePath} fill="none" stroke="url(#steamLine)" strokeWidth="2.5"
-                    strokeLinecap="round" strokeLinejoin="round" filter="url(#steamGlow)"/>
-
-                  {/* Flow nodes */}
                   {graphPoints.map((p, i) => (
                     <g key={i}>
-                      {/* Node ring */}
-                      <circle cx={p.x} cy={p.y} r="7" fill="rgba(10,25,15,0.9)" stroke={GOLD} strokeWidth="1.5"/>
-                      <circle cx={p.x} cy={p.y} r="3.5" fill={GOLD}/>
+                      <circle cx={p.x} cy={p.y} r="4.5" className="fill-surface stroke-accent" strokeWidth="2"/>
                       {p.tokens > 0 && (
-                        <text x={p.x} y={p.y - 13} textAnchor="middle"
-                          fill={`${GOLD}cc`} fontSize="8" fontFamily="'JetBrains Mono', monospace">
-                          {p.tokens > 1000 ? `${(p.tokens / 1000).toFixed(1)}k` : p.tokens}
+                        <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="8.5" className="fill-ink-2">
+                          {fmt(p.tokens)}
                         </text>
                       )}
-                      <text x={p.x} y="152" textAnchor="middle"
-                        fill={`${GOLD}55`} fontSize="9" fontFamily="'JetBrains Mono', monospace">
+                      <text x={p.x} y="152" textAnchor="middle" fontSize="9" className="fill-ink-3">
                         {p.label}
                       </text>
                     </g>
@@ -620,120 +372,61 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
                 </svg>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: GOLD, boxShadow: `0 0 8px ${GOLD}` }}/>
-                <span style={{ fontSize: '10px', color: `${GOLD}55`, fontFamily: "'JetBrains Mono', monospace" }}>Tokens used</span>
+              <div className="mt-3 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-accent" />
+                <span className="text-xs text-ink-2">Tokens used</span>
               </div>
             </div>
 
-            {/* Account info — steampunk panel */}
-            <div style={card}>
+            {/* Account info panel */}
+            <div className={cardCls}>
               {/* User identity */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '13px 15px', borderRadius: '11px', marginBottom: '13px',
-                background: `rgba(197,160,89,0.07)`, border: `1px solid ${GOLD}33`,
-              }}>
+              <div className="mb-3 flex items-center gap-3 rounded-md border border-line bg-bg px-3.5 py-3">
                 {user?.avatar ? (
-                  <img src={user.avatar} alt="avatar" style={{
-                    width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
-                    border: `2px solid ${GOLD}66`,
-                    boxShadow: `0 0 12px ${GOLD}44`,
-                  }} />
+                  <img src={user.avatar} alt="avatar" className="h-10 w-10 shrink-0 rounded-full border border-line object-cover" />
                 ) : (
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
-                    background: `linear-gradient(135deg, #3a2800, #6a4800)`,
-                    border: `2px solid ${GOLD}66`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '16px', color: GOLD,
-                    boxShadow: `0 0 12px ${GOLD}33`,
-                  }}>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[15px] font-medium text-accent">
                     {user?.name?.[0]?.toUpperCase()}
                   </div>
                 )}
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ color: GOLD, fontWeight: 600, fontSize: '13px', margin: 0, fontFamily: "'Playfair Display', serif" }}>
-                    {user?.name}
-                  </p>
-                  <p style={{ color: `${GOLD}55`, fontSize: '11px', margin: '1px 0 0', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {user?.email}
-                  </p>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-ink">{user?.name}</p>
+                  <p className="truncate text-xs text-ink-2">{user?.email}</p>
                 </div>
               </div>
 
-              {/* Info rows — steampunk data panels */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '12px' }}>
-                {[
-                  { label: 'Plan', value: isPro ? '✦ Pro' : 'Free' },
-                  { label: 'Tokens Remaining', value: (isPro || tokenLimit == null) ? '∞ Unlimited' : Math.max(tokenLimit - tokensUsed, 0).toLocaleString() },
-                  { label: 'Documents Processed', value: user?.documentsProcessed || 0 },
-                  { label: 'Active Days', value: `${stats.filter(s => s.tokensUsed > 0).length} / 7` },
-                ].map((row, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '9px 13px', borderRadius: '8px',
-                    background: 'rgba(197,160,89,0.04)', border: `1px solid ${GOLD}22`,
-                  }}>
-                    <span style={{ fontSize: '12px', color: `${GOLD}66`, fontFamily: "'JetBrains Mono', monospace" }}>{row.label}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: GOLD, fontFamily: "'JetBrains Mono', monospace" }}>{row.value}</span>
+              {/* Info rows */}
+              <div className="mb-3 space-y-1.5">
+                {accountRows.map((row, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-md border border-line px-3.5 py-2.5">
+                    <span className="text-[13px] text-ink-2">{row.label}</span>
+                    <span className="text-[13px] font-medium text-ink tabular-nums">{row.value}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Upgrade row — label left + beveled button right */}
+              {/* Upgrade row */}
               {!isPro && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <div style={{
-                    flex: '0 0 auto', padding: '11px 14px', borderRadius: '9px',
-                    background: 'rgba(197,160,89,0.05)', border: `1px solid ${GOLD}22`,
-                  }}>
-                    <span style={{ fontSize: '12px', color: `${GOLD}55`, whiteSpace: 'nowrap', fontFamily: "'JetBrains Mono', monospace" }}>
-                      Upgrade to Pro
-                    </span>
+                <div className="mb-3 flex items-center gap-2.5">
+                  <div className="shrink-0 rounded-md border border-line bg-bg px-3.5 py-2.5">
+                    <span className="whitespace-nowrap text-[13px] text-ink-2">Upgrade to Pro</span>
                   </div>
                   <button
                     onClick={() => setActivePage('Pricing')}
-                    style={{
-                      flex: 1, padding: '11px 14px', borderRadius: '9px',
-                      background: `linear-gradient(135deg, #3a2800, #6a4800)`,
-                      color: GOLD, border: `1px solid ${GOLD}66`,
-                      cursor: 'pointer', fontSize: '12px', fontWeight: 700,
-                      fontFamily: "'JetBrains Mono', monospace",
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                      boxShadow: `0 2px 12px rgba(197,160,89,0.25), inset 0 1px 0 rgba(255,255,255,0.06)`,
-                      transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.boxShadow = `0 4px 24px rgba(197,160,89,0.45), inset 0 1px 0 rgba(255,255,255,0.1)`
-                      e.currentTarget.style.transform = 'translateY(-1px)'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.boxShadow = `0 2px 12px rgba(197,160,89,0.25), inset 0 1px 0 rgba(255,255,255,0.06)`
-                      e.currentTarget.style.transform = 'translateY(0)'
-                    }}
+                    className={`${primaryBtn} flex-1 py-2.5`}
                   >
-                    ⭐ Get Pro – ₹499/mo
+                    Get Pro – ₹499/mo
                   </button>
                 </div>
               )}
 
-              {/* Logout — steampunk red */}
+              {/* Logout */}
               <button
                 onClick={onLogout}
-                style={{
-                  width: '100%', padding: '11px', borderRadius: '9px',
-                  background: 'rgba(80,20,20,0.5)', border: '1px solid rgba(239,68,68,0.3)',
-                  color: '#f87171', cursor: 'pointer',
-                  fontSize: '12px', fontWeight: 600, fontFamily: "'JetBrains Mono', monospace",
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-                  transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(120,30,30,0.6)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(80,20,20,0.5)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
+                className="flex w-full items-center justify-center gap-2 rounded-md border border-danger/25 bg-danger-soft px-4 py-2.5 text-[13px] font-medium text-danger transition-colors hover:border-danger/50"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+                  strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                   <polyline points="16 17 21 12 16 7"/>
                   <line x1="21" y1="12" x2="9" y2="12"/>
@@ -744,14 +437,7 @@ export default function Dashboard({ activePage, setActivePage, user, onLogout })
           </div>
 
           {/* ── Date range footer ── */}
-          <div style={{ marginTop: '14px', textAlign: 'center' }}>
-            <span style={{
-              fontSize: '11px', color: `${GOLD}44`, fontFamily: "'JetBrains Mono', monospace",
-              letterSpacing: '0.1em',
-            }}>
-              {stats.length > 0 ? `${stats[0]?.label} – ${stats[stats.length-1]?.label}` : '06/11 – 06/17'}
-            </span>
-          </div>
+          <p className="mt-5 text-center text-xs tracking-wide text-ink-3">{rangeLabel}</p>
 
         </div>
       </div>

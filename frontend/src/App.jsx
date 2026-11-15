@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -9,6 +9,9 @@ import Settings from './pages/Settings'
 import Workspace from './pages/Workspace'
 import Team from './pages/Team'
 import Admin from './pages/Admin'
+
+// Change this one line if you want a different product name on the loading screen
+const BRAND_NAME = 'Mural'
 
 function App() {
   // ✅ Reads saved page from localStorage on first load
@@ -88,14 +91,20 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: '#050816' }}>
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', animation: 'pulse-glow 2s infinite' }}>
-            <span className="text-white font-bold text-2xl">N</span>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <div className="flex flex-col items-center gap-5">
+          <div className="w-11 h-11 rounded-lg bg-accent flex items-center justify-center">
+            <span className="font-display text-2xl leading-none text-accent-on">
+              {BRAND_NAME.charAt(0)}
+            </span>
           </div>
-          <p className="text-purple-400 text-lg">Loading NEURALIQ...</p>
+          <div className="flex items-center gap-2.5 text-ink-2 text-sm">
+            <span
+              className="w-3.5 h-3.5 rounded-full border-2 border-line-strong border-t-accent animate-spin"
+              aria-hidden="true"
+            />
+            <span>Loading {BRAND_NAME}…</span>
+          </div>
         </div>
       </div>
     )
